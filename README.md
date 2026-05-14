@@ -6,7 +6,7 @@
 
 Multi-WhatsApp is a lightweight, multi-tab desktop application built with Electron that allows you to manage multiple WhatsApp accounts simultaneously in a single window. Perfect for users who need to handle personal, work, and business accounts without switching browsers or profiles.
 
-![Multi-WhatsApp Screenshot](https://raw.githubusercontent.com/electron/electron/master/docs/images/electron-logo.png) *(Note: Add your own screenshot here)*
+![Multi-WhatsApp Screenshot](https://github.com/user-attachments/assets/7f3a04b3-5c0e-47ad-9d45-29e4a5cd8405)
 
 ## ✨ Features
 
