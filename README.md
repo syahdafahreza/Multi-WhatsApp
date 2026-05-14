@@ -12,9 +12,12 @@ Multi-WhatsApp is a lightweight, multi-tab desktop application built with Electr
 
 - **Multiple Accounts:** Run as many WhatsApp accounts as you need in separate, isolated tabs.
 - **Persistent Sessions:** Each tab uses its own persistent partition, so you stay logged in even after restarting the app.
-- **Custom Tab Names:** Double-click any tab to rename it (e.g., "Work", "Personal", "Project Alpha") for easy identification.
-- **Drag & Drop Reordering:** Reorder your tabs easily by dragging them to your preferred position. The new order is automatically saved.
-- **Lightweight & Fast:** Built with Electron for a native desktop experience without the overhead of a full browser.
+- **Scrollable Tab Navigation:** Navigation buttons (`<` and `>`) appear dynamically when tabs overflow, allowing easy scrolling.
+- **Tab Context Menu:** Right-click on any tab to quickly rename or close it.
+- **Dynamic UI Styling:** Premium 2026 WhatsApp Web aesthetic with smooth corner clipping and border strokes that apply after loading.
+- **Enhanced Hamburger Menu:** Nested sub-menus, "About", and "Help" sections with auto-close functionality.
+- **Persistent Window State:** The app remembers your window size, position, and maximized status across sessions.
+- **Multi-Architecture Support:** Build artifacts available for x86, x64, and ARM architectures.
 - **External Link Handling:** Automatically opens links in your system's default browser to keep your chat environment clean.
 
 ## 🚀 Getting Started
@@ -46,15 +49,20 @@ Multi-WhatsApp is a lightweight, multi-tab desktop application built with Electr
 
 - **Add a New Account:** Click the `+` button in the tab bar to create a new WhatsApp instance.
 - **Switch Tabs:** Click on any tab to bring that WhatsApp account to focus.
-- **Rename Tabs:** Double-click a tab to open the rename dialog. Enter your preferred name and click "Save".
+- **Rename Tabs:** Double-click a tab or use the right-click context menu to open the rename dialog.
 - **Reorder Tabs:** Click and hold a tab, then drag it to its new position.
-- **Close Tabs:** Click the `×` icon on the tab you want to remove.
+- **Close Tabs:** Click the `×` icon or use the right-click context menu.
 
 ## 💻 Tech Stack
 
 - **Framework:** [Electron](https://www.electronjs.org/)
 - **Frontend:** Vanilla HTML, CSS, and JavaScript
-- **Storage:** JSON-based configuration for tab persistence
+- **Storage:** JSON-based configuration for tab persistence and window state
+
+## 🧪 Current Status & Experiments
+
+> [!NOTE]
+> **User Agent Experiment:** I am currently experimenting with mimicking the official WhatsApp Desktop User Agent to ensure full compatibility and bypass "unsupported browser" warnings. Currently, this implementation is still in progress and has not yet successfully spoofed the desktop client detection.
 
 ## 📄 License
 
@@ -72,9 +80,12 @@ Multi-WhatsApp adalah aplikasi desktop multi-tab ringan berbasis Electron yang m
 
 - **Banyak Akun:** Jalankan sebanyak mungkin akun WhatsApp yang Anda butuhkan di tab yang terpisah dan terisolasi.
 - **Sesi Persisten:** Setiap tab menggunakan partisi persistennya sendiri, sehingga Anda tetap masuk bahkan setelah me-restart aplikasi.
-- **Nama Tab Kustom:** Klik ganda tab apa saja untuk mengganti namanya (misalnya, "Pekerjaan", "Pribadi", "Proyek Alpha") agar mudah diidentifikasi.
-- **Seret & Lepas (Drag & Drop):** Susun ulang tab Anda dengan mudah dengan menyeretnya ke posisi yang Anda inginkan. Urutan baru disimpan secara otomatis.
-- **Ringan & Cepat:** Dibangun dengan Electron untuk pengalaman desktop asli tanpa beban browser penuh.
+- **Navigasi Tab Dapat Digulir:** Tombol navigasi (`<` dan `>`) muncul secara dinamis saat tab meluap, memungkinkan pengguliran yang mudah.
+- **Menu Konteks Tab:** Klik kanan pada tab apa saja untuk mengganti nama atau menutupnya dengan cepat.
+- **Desain UI Dinamis:** Estetika WhatsApp Web modern 2026 dengan clipping sudut yang halus dan border stroke yang muncul setelah loading selesai.
+- **Menu Hamburger yang Ditingkatkan:** Sub-menu bersarang, bagian "Tentang", dan "Bantuan" dengan fungsi tutup otomatis.
+- **Persistensi Status Jendela:** Aplikasi mengingat ukuran jendela, posisi, dan status dimaksimalkan antar sesi.
+- **Dukungan Multi-Arsitektur:** Artefak build tersedia untuk arsitektur x86, x64, dan ARM.
 - **Penanganan Tautan Eksternal:** Secara otomatis membuka tautan di browser default sistem Anda agar lingkungan obrolan Anda tetap bersih.
 
 ## 🚀 Memulai
@@ -106,15 +117,20 @@ Multi-WhatsApp adalah aplikasi desktop multi-tab ringan berbasis Electron yang m
 
 - **Tambah Akun Baru:** Klik tombol `+` di bilah tab untuk membuat instans WhatsApp baru.
 - **Beralih Tab:** Klik tab mana saja untuk fokus ke akun WhatsApp tersebut.
-- **Ganti Nama Tab:** Klik ganda tab untuk membuka dialog ubah nama. Masukkan nama yang Anda inginkan dan klik "Simpan".
+- **Ganti Nama Tab:** Klik ganda tab atau gunakan menu konteks klik kanan untuk membuka dialog ubah nama.
 - **Susun Ulang Tab:** Klik dan tahan tab, lalu seret ke posisi baru.
-- **Tutup Tab:** Klik ikon `×` pada tab yang ingin hapus.
+- **Tutup Tab:** Klik ikon `×` atau gunakan menu konteks klik kanan.
 
 ## 💻 Tech Stack
 
 - **Framework:** [Electron](https://www.electronjs.org/)
 - **Frontend:** HTML Vanilla, CSS, dan JavaScript
-- **Penyimpanan:** Konfigurasi berbasis JSON untuk persistensi tab
+- **Penyimpanan:** Konfigurasi berbasis JSON untuk persistensi tab dan status jendela
+
+## 🧪 Status Saat Ini & Eksperimen
+
+> [!NOTE]
+> **Eksperimen User Agent:** Saat ini saya masih bereksperimen menyamakan user agent sehingga terdeteksi seperti whatsapp desktop asli untuk memastikan kompatibilitas penuh dan menghindari peringatan "browser tidak didukung", tetapi saat ini masih gagal.
 
 ## 📄 Lisensi
 
@@ -123,3 +139,4 @@ Proyek ini dilisensikan di bawah Lisensi MIT - lihat file [LICENSE](LICENSE) unt
 ---
 
 *Dibuat dengan ❤️ untuk produktivitas.*
+
