@@ -328,6 +328,21 @@ function createTabElements(tab) {
             }
           }
           
+          // Also check for WhatsApp internal dialogs/modals with dark backdrops.
+          // When a dialog is open, the overlay covers the chat area, making our
+          // curve/border overlays look disconnected. Hide them during dialogs too.
+          if (!isViewerOpen) {
+            const dialogEl = document.querySelector('[role="dialog"]');
+            if (dialogEl && dialogEl.offsetWidth > 0 && dialogEl.offsetHeight > 0) {
+              // Verify it's a significant dialog (not a tiny tooltip/dropdown)
+              // by checking if it has a backdrop covering a large area
+              const backdrop = dialogEl.parentElement;
+              if (backdrop && backdrop.offsetWidth > window.innerWidth * 0.5) {
+                isViewerOpen = true;
+              }
+            }
+          }
+          
           if (isViewerOpen !== lastMediaState) {
             lastMediaState = isViewerOpen;
             console.log(isViewerOpen ? '__WA_MEDIA_OPEN__' : '__WA_MEDIA_CLOSED__');
