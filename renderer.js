@@ -250,11 +250,10 @@ function createTabElements(tab) {
   // Create webview
   const webview = document.createElement('webview');
   webview.id = `view-${tab.id}`;
-  webview.src = WHATSAPP_URL;
   webview.partition = tab.partition;
   webview.setAttribute('allowpopups', '');
-  // Adding custom user agent can help with WhatsApp Web detection
-  webview.useragent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  webview.setAttribute('useragent', "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+  webview.src = WHATSAPP_URL;
   
   viewsContainer.appendChild(webview);
   

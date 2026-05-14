@@ -1,0 +1,11 @@
+# WhatsApp User Agent Experiments
+
+## Attempt 1 (Failed: WhatsApp Web reported unsupported browser)
+String: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 WhatsApp/2.3000.1012111
+
+## Attempt 2 (Failed: WhatsApp Web reported unsupported browser)
+String: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0 WhatsApp/2.2615.101.0
+Context: Based on actual WhatsApp UWP version 2.2615.101.0 and WebView2 (Edge) engine.
+
+## Working Fallback
+String: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
