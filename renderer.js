@@ -8,9 +8,9 @@ let editingTabId = null;
 let draggedTabId = null;
 let tabLoadedStates = {};
 let tabMediaStates = {};
-let tabCssKeys = {}; // Track injected CSS keys per tab: { tabId: { curve: key, border: key } }
+let tabCssKeys = {}; // Track injected overlay state per tab
 
-// Get the current active theme colors for injected CSS
+// Get the current active theme colors
 function getOverlayColors() {
   const style = getComputedStyle(document.documentElement);
   return {
@@ -19,47 +19,27 @@ function getOverlayColors() {
   };
 }
 
-// CSS to inject into webview for curve and border effects
-function getOverlayCss() {
-  const colors = getOverlayColors();
-  return `
-    html::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 64px;
-      width: 12px;
-      height: 12px;
-      background: radial-gradient(circle at bottom right, transparent 12px, ${colors.titleBarBg} 12px);
-      z-index: 1;
-      pointer-events: none;
-    }
-    html::after {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 64px;
-      width: calc(100% - 64px);
-      height: 100%;
-      border-top-left-radius: 12px;
-      border-top: 1px solid ${colors.chatBorder};
-      border-left: 1px solid ${colors.chatBorder};
-      box-sizing: border-box;
-      pointer-events: none;
-      z-index: 1;
-    }
-  `;
-}
-
 async function injectOverlayCss(tabId) {
   const webview = document.getElementById(`view-${tabId}`);
-  if (!webview) return;
+  if (!webview || tabCssKeys[tabId]) return;
+  const colors = getOverlayColors();
   try {
-    const css = getOverlayCss();
-    const key = await webview.insertCSS(css);
-    tabCssKeys[tabId] = key;
+    await webview.executeJavaScript(`
+      if (!document.getElementById('__wa_curve_overlay')) {
+        const curve = document.createElement('div');
+        curve.id = '__wa_curve_overlay';
+        curve.style.cssText = 'position:fixed;top:0;left:64px;width:12px;height:12px;background:radial-gradient(circle at bottom right, transparent 12px, ${colors.titleBarBg} 12px);pointer-events:none;z-index:50;';
+        document.body.appendChild(curve);
+        
+        const border = document.createElement('div');
+        border.id = '__wa_border_overlay';
+        border.style.cssText = 'position:fixed;top:0;left:64px;width:calc(100% - 64px);height:100%;border-top-left-radius:12px;border-top:1px solid ${colors.chatBorder};border-left:1px solid ${colors.chatBorder};box-sizing:border-box;pointer-events:none;z-index:50;';
+        document.body.appendChild(border);
+      }
+    `);
+    tabCssKeys[tabId] = true;
   } catch (e) {
-    console.error('Failed to inject overlay CSS:', e);
+    console.error('Failed to inject overlay:', e);
   }
 }
 
@@ -67,10 +47,15 @@ async function removeOverlayCss(tabId) {
   const webview = document.getElementById(`view-${tabId}`);
   if (!webview || !tabCssKeys[tabId]) return;
   try {
-    await webview.removeInsertedCSS(tabCssKeys[tabId]);
+    await webview.executeJavaScript(`
+      const c = document.getElementById('__wa_curve_overlay');
+      const b = document.getElementById('__wa_border_overlay');
+      if (c) c.remove();
+      if (b) b.remove();
+    `);
     tabCssKeys[tabId] = null;
   } catch (e) {
-    console.error('Failed to remove overlay CSS:', e);
+    console.error('Failed to remove overlay:', e);
   }
 }
 
@@ -96,12 +81,10 @@ function updateOverlaysVisibility() {
   if (!activeTabId) return;
   
   if (shouldShow) {
-    // Inject CSS if not already injected
     if (!tabCssKeys[activeTabId]) {
       injectOverlayCss(activeTabId);
     }
   } else {
-    // Remove CSS if injected
     if (tabCssKeys[activeTabId]) {
       removeOverlayCss(activeTabId);
     }
