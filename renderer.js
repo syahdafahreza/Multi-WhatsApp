@@ -288,29 +288,49 @@ function createTabElements(tab) {
       }
 
       // Polling-based Media Viewer detection (runs every 500ms)
-      // Uses document.elementFromPoint to check if a media element covers the center of the screen.
-      // This avoids MutationObserver cascading issues that cause false positives.
+      // Checks multiple points across the screen for media elements (img/video/canvas).
+      // This avoids MutationObserver cascading issues and sidebar false positives.
       if (!window.__wa_media_poll) {
         let lastMediaState = false;
         
         window.__wa_media_poll = setInterval(() => {
-          const cx = window.innerWidth / 2;
-          const cy = window.innerHeight / 2;
-          const el = document.elementFromPoint(cx, cy);
+          let isViewerOpen = false;
           
-          if (!el) return;
+          // Check multiple points across the screen for large media elements.
+          // When a media/status viewer is open, at least one of these points
+          // will hit the displayed image/video/canvas.
+          const points = [
+            [0.5, 0.5],   // center
+            [0.3, 0.5],   // left-center
+            [0.7, 0.5],   // right-center
+            [0.5, 0.3],   // center-top
+            [0.5, 0.7],   // center-bottom
+          ];
           
-          // When media viewer is open, the center of the screen will be an img, video, or canvas element
-          // During normal chat, the center is text/div elements from the message list
-          const tag = el.tagName;
-          const isMediaElement = (tag === 'IMG' || tag === 'VIDEO' || tag === 'CANVAS');
+          for (const [px, py] of points) {
+            const x = window.innerWidth * px;
+            const y = window.innerHeight * py;
+            const el = document.elementFromPoint(x, y);
+            
+            if (!el) continue;
+            
+            const tag = el.tagName;
+            const isMedia = (tag === 'IMG' || tag === 'VIDEO' || tag === 'CANVAS');
+            
+            if (isMedia && el.offsetWidth > 150 && el.offsetHeight > 150) {
+              // Chat bubble images are always inside #main (chat panel) or #side (chat list).
+              // Media viewer images are in a separate fullscreen overlay, NOT inside these panels.
+              const isInChatPanel = el.closest('#main') || el.closest('#side') || el.closest('#pane-side');
+              if (!isInChatPanel) {
+                isViewerOpen = true;
+                break;
+              }
+            }
+          }
           
-          // Also check if the element is large enough to be a viewer (not just a small inline image)
-          const isLarge = isMediaElement && el.offsetWidth > 200 && el.offsetHeight > 200;
-          
-          if (isLarge !== lastMediaState) {
-            lastMediaState = isLarge;
-            console.log(isLarge ? '__WA_MEDIA_OPEN__' : '__WA_MEDIA_CLOSED__');
+          if (isViewerOpen !== lastMediaState) {
+            lastMediaState = isViewerOpen;
+            console.log(isViewerOpen ? '__WA_MEDIA_OPEN__' : '__WA_MEDIA_CLOSED__');
           }
         }, 500);
       }
