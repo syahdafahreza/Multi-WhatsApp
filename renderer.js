@@ -26,15 +26,17 @@ async function injectOverlayCss(tabId) {
   try {
     await webview.executeJavaScript(`
       if (!document.getElementById('__wa_curve_overlay')) {
+        const root = document.getElementById('app') || document.body;
+        
         const curve = document.createElement('div');
         curve.id = '__wa_curve_overlay';
-        curve.style.cssText = 'position:fixed;top:0;left:64px;width:12px;height:12px;background:radial-gradient(circle at bottom right, transparent 12px, ${colors.titleBarBg} 12px);pointer-events:none;z-index:50;';
-        document.body.appendChild(curve);
+        curve.style.cssText = 'position:fixed;top:0;left:64px;width:12px;height:12px;background:radial-gradient(circle at bottom right, transparent 12px, ${colors.titleBarBg} 12px);pointer-events:none;z-index:9999;';
+        root.appendChild(curve);
         
         const border = document.createElement('div');
         border.id = '__wa_border_overlay';
-        border.style.cssText = 'position:fixed;top:0;left:64px;width:calc(100% - 64px);height:100%;border-top-left-radius:12px;border-top:1px solid ${colors.chatBorder};border-left:1px solid ${colors.chatBorder};box-sizing:border-box;pointer-events:none;z-index:50;';
-        document.body.appendChild(border);
+        border.style.cssText = 'position:fixed;top:0;left:64px;width:calc(100% - 64px);height:100%;border-top-left-radius:12px;border-top:1px solid ${colors.chatBorder};border-left:1px solid ${colors.chatBorder};box-sizing:border-box;pointer-events:none;z-index:9999;';
+        root.appendChild(border);
       }
     `);
     tabCssKeys[tabId] = true;
@@ -390,6 +392,9 @@ function createTabElements(tab) {
             const isMedia = (tag === 'IMG' || tag === 'VIDEO' || tag === 'CANVAS');
             
             if (isMedia && el.offsetWidth > 150 && el.offsetHeight > 150) {
+              // Skip our own injected overlay divs
+              if (el.id === '__wa_curve_overlay' || el.id === '__wa_border_overlay') continue;
+              
               // Chat bubble images are always inside #main (chat panel) or #side (chat list).
               // Media viewer images are in a separate fullscreen overlay, NOT inside these panels.
               const isInChatPanel = el.closest('#main') || el.closest('#side') || el.closest('#pane-side');
