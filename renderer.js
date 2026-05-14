@@ -6,6 +6,25 @@ let config = {
 let activeTabId = null;
 let editingTabId = null;
 let draggedTabId = null;
+let tabLoadedStates = {};
+
+function updateOverlaysVisibility() {
+  const isLoaded = activeTabId && tabLoadedStates[activeTabId];
+  const display = isLoaded ? 'block' : 'none';
+  const innerCurve = document.getElementById('inner-curve-overlay');
+  const chatBorder = document.getElementById('chat-border-overlay');
+  
+  if (innerCurve) innerCurve.style.display = display;
+  if (chatBorder) chatBorder.style.display = display;
+  
+  if (viewsContainer) {
+    if (isLoaded) {
+      viewsContainer.classList.add('is-loaded');
+    } else {
+      viewsContainer.classList.remove('is-loaded');
+    }
+  }
+}
 
 const WHATSAPP_URL = 'https://web.whatsapp.com';
 
@@ -39,7 +58,12 @@ const translations = {
     'save-settings': 'Save',
     'close-settings': 'Close',
     'close-about': 'Close',
-    'about-desc': 'Multi-WhatsApp is a lightweight, multi-tab desktop application built with Electron that allows you to manage multiple WhatsApp accounts simultaneously in a single window. Perfect for users who need to handle personal, work, and business accounts without switching browsers or profiles.'
+    'about-desc': 'Multi-WhatsApp is a lightweight, multi-tab desktop application built with Electron that allows you to manage multiple WhatsApp accounts simultaneously in a single window. Perfect for users who need to handle personal, work, and business accounts without switching browsers or profiles.',
+    'ctx-rename': 'Rename Tab',
+    'ctx-close': 'Close Tab',
+    'ctx-reload': 'Reload Tab',
+    'window-label': 'Window Management',
+    'reset-window': 'Reset Window Size & Position'
   },
   'id-id': {
     'menu-file': 'Berkas',
@@ -70,13 +94,20 @@ const translations = {
     'save-settings': 'Simpan',
     'close-settings': 'Tutup',
     'close-about': 'Tutup',
-    'about-desc': 'Multi-WhatsApp adalah aplikasi desktop multi-tab ringan berbasis Electron yang memungkinkan Anda mengelola beberapa akun WhatsApp secara bersamaan dalam satu jendela. Sangat cocok bagi pengguna yang perlu menangani akun pribadi, pekerjaan, dan bisnis tanpa harus berganti browser atau profil.'
+    'about-desc': 'Multi-WhatsApp adalah aplikasi desktop multi-tab ringan berbasis Electron yang memungkinkan Anda mengelola beberapa akun WhatsApp secara bersamaan dalam satu jendela. Sangat cocok bagi pengguna yang perlu menangani akun pribadi, pekerjaan, dan bisnis tanpa harus berganti browser atau profil.',
+    'ctx-rename': 'Ubah Nama Tab',
+    'ctx-close': 'Tutup Tab',
+    'ctx-reload': 'Muat Ulang Tab',
+    'window-label': 'Manajemen Jendela',
+    'reset-window': 'Atur Ulang Ukuran & Posisi Jendela'
   }
 };
 
 const tabsBar = document.getElementById('tabs-bar');
 const viewsContainer = document.getElementById('views-container');
 const addTabBtn = document.getElementById('add-tab-btn');
+const scrollLeftBtn = document.getElementById('scroll-left-btn');
+const scrollRightBtn = document.getElementById('scroll-right-btn');
 
 // Modal elements
 const editModal = document.getElementById('edit-modal');
@@ -96,6 +127,8 @@ const closeSettingsBtn = document.getElementById('close-settings');
 // Menu elements
 const hamburgerBtn = document.getElementById('hamburger-btn');
 const menuDropdown = document.getElementById('menu-dropdown');
+const tabContextMenu = document.getElementById('tab-context-menu');
+let contextMenuTabId = null;
 
 // Load saved config or create a default one
 async function init() {
@@ -125,6 +158,26 @@ async function init() {
       applyTheme('system');
     }
   });
+
+  // Initial scroll button check
+  setTimeout(updateScrollButtonsVisibility, 100);
+}
+
+function updateScrollButtonsVisibility() {
+  const hasOverflow = tabsBar.scrollWidth > tabsBar.clientWidth;
+  
+  if (hasOverflow) {
+    scrollLeftBtn.style.display = 'flex';
+    scrollRightBtn.style.display = 'flex';
+    
+    // Enable/disable based on scroll position
+    // Use a small buffer (1px) for floating point precision issues
+    scrollLeftBtn.disabled = tabsBar.scrollLeft <= 1;
+    scrollRightBtn.disabled = tabsBar.scrollLeft + tabsBar.clientWidth >= tabsBar.scrollWidth - 1;
+  } else {
+    scrollLeftBtn.style.display = 'none';
+    scrollRightBtn.style.display = 'none';
+  }
 }
 
 function saveConfig() {
@@ -139,8 +192,9 @@ function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', activeTheme);
   
   // Update native title bar overlay
-  const barColor = activeTheme === 'dark' ? '#1d1f1f' : '#00a884';
-  window.electronAPI.setTitleBarColor(barColor, '#ffffff');
+  const barColor = activeTheme === 'dark' ? '#1d1f1f' : '#F7F5F3';
+  const symbolColor = activeTheme === 'dark' ? '#ffffff' : '#111b21';
+  window.electronAPI.setTitleBarColor(barColor, symbolColor);
 }
 
 function applyLanguage(lang) {
@@ -169,6 +223,7 @@ function addNewTab() {
   createTabElements(newTab);
   switchTab(id);
   saveConfig();
+  updateScrollButtonsVisibility();
 }
 
 function createTabElements(tab) {
@@ -203,6 +258,37 @@ function createTabElements(tab) {
   
   viewsContainer.appendChild(webview);
   
+  tabLoadedStates[tab.id] = false;
+
+  webview.addEventListener('dom-ready', () => {
+    const script = `
+      if (!window.__wa_loaded_observer) {
+        const checkLoaded = () => document.querySelector('#side') || document.querySelector('#pane-side') || document.querySelector('[data-testid="chat-list"]');
+        if (checkLoaded()) {
+          console.log('__WA_LOADED__');
+        } else {
+          window.__wa_loaded_observer = new MutationObserver((mutations, obs) => {
+            if (checkLoaded()) {
+              console.log('__WA_LOADED__');
+              obs.disconnect();
+            }
+          });
+          window.__wa_loaded_observer.observe(document.body, { childList: true, subtree: true });
+        }
+      }
+    `;
+    webview.executeJavaScript(script).catch(e => console.error(e));
+  });
+
+  webview.addEventListener('console-message', (e) => {
+    if (e.message === '__WA_LOADED__') {
+      tabLoadedStates[tab.id] = true;
+      if (activeTabId === tab.id) {
+        updateOverlaysVisibility();
+      }
+    }
+  });
+
   // Event listeners
   tabEl.addEventListener('click', (e) => {
     if (e.target !== closeBtn) {
@@ -255,6 +341,12 @@ function createTabElements(tab) {
       reorderTabs(draggedTabId, tab.id);
     }
   });
+
+  // Context Menu listener
+  tabEl.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showTabContextMenu(e.clientX, e.clientY, tab.id);
+  });
 }
 
 function reorderTabs(fromId, toId) {
@@ -277,6 +369,7 @@ function reorderTabs(fromId, toId) {
     }
     
     saveConfig();
+    updateScrollButtonsVisibility();
   }
 }
 
@@ -292,6 +385,10 @@ function switchTab(id) {
     tabEl.classList.add('active');
     viewEl.classList.add('active');
     activeTabId = id;
+    updateOverlaysVisibility();
+    
+    // Ensure active tab is visible
+    tabEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   }
 }
 
@@ -319,6 +416,7 @@ function closeTab(id) {
     const newIndex = Math.min(tabIndex, config.tabs.length - 1);
     switchTab(config.tabs[newIndex].id);
   }
+  updateScrollButtonsVisibility();
 }
 
 // Modal functions
@@ -425,6 +523,80 @@ menuDropdown.addEventListener('click', (e) => {
   e.stopPropagation();
 });
 
+// Tab Context Menu logic
+function showTabContextMenu(x, y, tabId) {
+  contextMenuTabId = tabId;
+  tabContextMenu.style.display = 'block';
+  
+  // Positioning logic to prevent going off-screen
+  const menuWidth = tabContextMenu.offsetWidth || 160;
+  const menuHeight = tabContextMenu.offsetHeight || 80;
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+  
+  if (x + menuWidth > windowWidth) x = windowWidth - menuWidth - 10;
+  if (y + menuHeight > windowHeight) y = windowHeight - menuHeight - 10;
+  
+  tabContextMenu.style.left = `${x}px`;
+  tabContextMenu.style.top = `${y}px`;
+
+  // Create overlay if it doesn't exist
+  let overlay = document.getElementById('ctx-menu-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'ctx-menu-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.zIndex = '3999';
+    overlay.style.webkitAppRegion = 'no-drag';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('mousedown', () => {
+      closeTabContextMenu();
+    });
+  }
+  overlay.style.display = 'block';
+}
+
+function closeTabContextMenu() {
+  tabContextMenu.style.display = 'none';
+  contextMenuTabId = null;
+  const overlay = document.getElementById('ctx-menu-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+document.getElementById('ctx-rename-tab').addEventListener('click', () => {
+  if (contextMenuTabId) {
+    openEditModal(contextMenuTabId);
+  }
+  closeTabContextMenu();
+});
+
+document.getElementById('ctx-reload-tab').addEventListener('click', () => {
+  if (contextMenuTabId) {
+    const view = document.getElementById(`view-${contextMenuTabId}`);
+    if (view) view.reload();
+  }
+  closeTabContextMenu();
+});
+
+document.getElementById('ctx-close-tab').addEventListener('click', () => {
+  if (contextMenuTabId) {
+    closeTab(contextMenuTabId);
+  }
+  closeTabContextMenu();
+});
+
+// Close all menus on escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeMenu();
+    closeTabContextMenu();
+  }
+});
+
 // Menu Action handlers
 document.getElementById('menu-new-tab').addEventListener('click', () => {
   addNewTab();
@@ -500,12 +672,39 @@ closeAboutBtn.addEventListener('click', () => {
   aboutModal.style.display = 'none';
 });
 
+document.getElementById('reset-window-btn').addEventListener('click', () => {
+  if (confirm(config.language === 'id-id' ? 
+    'Apakah Anda yakin ingin mengatur ulang ukuran dan posisi jendela?' : 
+    'Are you sure you want to reset the window size and position?')) {
+    window.electronAPI.resetWindow();
+  }
+});
+
 // Settings Modal Listeners
 saveSettingsBtn.addEventListener('click', saveSettings);
 closeSettingsBtn.addEventListener('click', closeSettingsModal);
 
 // Original Event Listeners
 addTabBtn.addEventListener('click', addNewTab);
+
+scrollLeftBtn.addEventListener('click', () => {
+  tabsBar.scrollBy({ left: -200, behavior: 'smooth' });
+});
+
+scrollRightBtn.addEventListener('click', () => {
+  tabsBar.scrollBy({ left: 200, behavior: 'smooth' });
+});
+
+tabsBar.addEventListener('scroll', updateScrollButtonsVisibility);
+
+tabsBar.addEventListener('wheel', (e) => {
+  if (e.deltaY !== 0) {
+    e.preventDefault();
+    tabsBar.scrollBy({ left: e.deltaY, behavior: 'auto' });
+  }
+});
+
+window.addEventListener('resize', updateScrollButtonsVisibility);
 
 saveTabNameBtn.addEventListener('click', saveEditedTabName);
 cancelTabNameBtn.addEventListener('click', closeEditModal);

@@ -23,15 +23,7 @@ function saveWindowState(window) {
   }
 }
 
-function loadWindowState() {
-  try {
-    if (fs.existsSync(windowStatePath)) {
-      return JSON.parse(fs.readFileSync(windowStatePath, 'utf-8'));
-    }
-  } catch (e) {
-    console.error('Failed to load window state:', e);
-  }
-
+function getDefaultWindowState() {
   // Get screen dimensions from the primary display's work area
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   
@@ -50,6 +42,18 @@ function loadWindowState() {
   };
 }
 
+function loadWindowState() {
+  try {
+    if (fs.existsSync(windowStatePath)) {
+      return JSON.parse(fs.readFileSync(windowStatePath, 'utf-8'));
+    }
+  } catch (e) {
+    console.error('Failed to load window state:', e);
+  }
+
+  return getDefaultWindowState();
+}
+
 function createWindow() {
   const state = loadWindowState();
 
@@ -59,9 +63,9 @@ function createWindow() {
     titleBarStyle: 'hidden',
     icon: path.join(__dirname, 'assets', 'icon.png'),
     titleBarOverlay: {
-      color: '#00a884',
+      color: '#1d1f1f',
       symbolColor: '#ffffff',
-      height: 40
+      height: 48
     },
     backgroundColor: '#1d1f1f',
     webPreferences: {
@@ -131,6 +135,24 @@ function createWindow() {
   ipcMain.on('toggle-devtools', () => {
     mainWindow.webContents.toggleDevTools();
   });
+
+  ipcMain.on('reset-window', () => {
+    const defaults = getDefaultWindowState();
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    }
+    mainWindow.setSize(defaults.width, defaults.height);
+    mainWindow.center();
+    
+    // Delete saved state so it doesn't overwrite on close if reset was intended
+    try {
+      if (fs.existsSync(windowStatePath)) {
+        fs.unlinkSync(windowStatePath);
+      }
+    } catch (e) {
+      console.error('Failed to delete window state:', e);
+    }
+  });
   
   ipcMain.on('open-external', (event, url) => {
     require('electron').shell.openExternal(url);
@@ -140,7 +162,7 @@ function createWindow() {
     mainWindow.setTitleBarOverlay({
       color: color,
       symbolColor: symbolColor,
-      height: 40
+      height: 48
     });
   });
 

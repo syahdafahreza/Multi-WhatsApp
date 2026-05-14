@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   reload: () => ipcRenderer.send('reload-window'),
   toggleDevTools: () => ipcRenderer.send('toggle-devtools'),
   openExternal: (url) => ipcRenderer.send('open-external', url),
-  setTitleBarColor: (color, symbolColor) => ipcRenderer.send('update-title-bar', color, symbolColor)
+  setTitleBarColor: (color, symbolColor) => ipcRenderer.send('update-title-bar', color, symbolColor),
+  resetWindow: () => ipcRenderer.send('reset-window')
 });
