@@ -8,87 +8,26 @@ let editingTabId = null;
 let draggedTabId = null;
 let tabLoadedStates = {};
 let tabMediaStates = {};
-let tabCssKeys = {}; // Track injected overlay state per tab
-
-// Get the current active theme colors
-function getOverlayColors() {
-  const style = getComputedStyle(document.documentElement);
-  return {
-    titleBarBg: style.getPropertyValue('--title-bar-bg').trim(),
-    chatBorder: style.getPropertyValue('--chat-border').trim(),
-  };
-}
-
-async function injectOverlayCss(tabId) {
-  const webview = document.getElementById(`view-${tabId}`);
-  if (!webview || tabCssKeys[tabId]) return;
-  const colors = getOverlayColors();
-  try {
-    await webview.executeJavaScript(`
-      if (!document.getElementById('__wa_curve_overlay')) {
-        const root = document.getElementById('app') || document.body;
-        
-        const curve = document.createElement('div');
-        curve.id = '__wa_curve_overlay';
-        curve.style.cssText = 'position:fixed;top:0;left:64px;width:12px;height:12px;background:radial-gradient(circle at bottom right, transparent 12px, ${colors.titleBarBg} 12px);pointer-events:none;z-index:9999;';
-        root.appendChild(curve);
-        
-        const border = document.createElement('div');
-        border.id = '__wa_border_overlay';
-        border.style.cssText = 'position:fixed;top:0;left:64px;width:calc(100% - 64px);height:100%;border-top-left-radius:12px;border-top:1px solid ${colors.chatBorder};border-left:1px solid ${colors.chatBorder};box-sizing:border-box;pointer-events:none;z-index:9999;';
-        root.appendChild(border);
-      }
-    `);
-    tabCssKeys[tabId] = true;
-  } catch (e) {
-    console.error('Failed to inject overlay:', e);
-  }
-}
-
-async function removeOverlayCss(tabId) {
-  const webview = document.getElementById(`view-${tabId}`);
-  if (!webview || !tabCssKeys[tabId]) return;
-  try {
-    await webview.executeJavaScript(`
-      const c = document.getElementById('__wa_curve_overlay');
-      const b = document.getElementById('__wa_border_overlay');
-      if (c) c.remove();
-      if (b) b.remove();
-    `);
-    tabCssKeys[tabId] = null;
-  } catch (e) {
-    console.error('Failed to remove overlay:', e);
-  }
-}
 
 function updateOverlaysVisibility() {
-  // Always hide external overlays — effects are now injected into the webview
-  const innerCurve = document.getElementById('inner-curve-overlay');
-  const chatBorder = document.getElementById('chat-border-overlay');
-  if (innerCurve) innerCurve.style.display = 'none';
-  if (chatBorder) chatBorder.style.display = 'none';
-  
   const isLoaded = activeTabId && tabLoadedStates[activeTabId];
   const isMediaOpen = activeTabId && tabMediaStates[activeTabId];
+  
+  // Only show overlays if loaded AND media is NOT open
   const shouldShow = isLoaded && !isMediaOpen;
+  const display = shouldShow ? 'block' : 'none';
+  
+  const innerCurve = document.getElementById('inner-curve-overlay');
+  const chatBorder = document.getElementById('chat-border-overlay');
+  
+  if (innerCurve) innerCurve.style.display = display;
+  if (chatBorder) chatBorder.style.display = display;
   
   if (viewsContainer) {
     if (shouldShow) {
       viewsContainer.classList.add('is-loaded');
     } else {
       viewsContainer.classList.remove('is-loaded');
-    }
-  }
-  
-  if (!activeTabId) return;
-  
-  if (shouldShow) {
-    if (!tabCssKeys[activeTabId]) {
-      injectOverlayCss(activeTabId);
-    }
-  } else {
-    if (tabCssKeys[activeTabId]) {
-      removeOverlayCss(activeTabId);
     }
   }
 }
@@ -262,19 +201,6 @@ function applyTheme(theme) {
   const barColor = activeTheme === 'dark' ? '#1d1f1f' : '#F7F5F3';
   const symbolColor = activeTheme === 'dark' ? '#ffffff' : '#111b21';
   window.electronAPI.setTitleBarColor(barColor, symbolColor);
-  
-  // Re-inject overlay CSS with updated colors for all loaded tabs
-  setTimeout(() => {
-    config.tabs.forEach(tab => {
-      if (tabCssKeys[tab.id]) {
-        removeOverlayCss(tab.id).then(() => {
-          if (tabLoadedStates[tab.id] && !tabMediaStates[tab.id]) {
-            injectOverlayCss(tab.id);
-          }
-        });
-      }
-    });
-  }, 100);
 }
 
 function applyLanguage(lang) {
@@ -392,9 +318,6 @@ function createTabElements(tab) {
             const isMedia = (tag === 'IMG' || tag === 'VIDEO' || tag === 'CANVAS');
             
             if (isMedia && el.offsetWidth > 150 && el.offsetHeight > 150) {
-              // Skip our own injected overlay divs
-              if (el.id === '__wa_curve_overlay' || el.id === '__wa_border_overlay') continue;
-              
               // Chat bubble images are always inside #main (chat panel) or #side (chat list).
               // Media viewer images are in a separate fullscreen overlay, NOT inside these panels.
               const isInChatPanel = el.closest('#main') || el.closest('#side') || el.closest('#pane-side');
