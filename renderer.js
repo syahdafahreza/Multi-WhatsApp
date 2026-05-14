@@ -8,26 +8,102 @@ let editingTabId = null;
 let draggedTabId = null;
 let tabLoadedStates = {};
 let tabMediaStates = {};
+let tabCssKeys = {}; // Track injected CSS keys per tab: { tabId: { curve: key, border: key } }
+
+// Get the current active theme colors for injected CSS
+function getOverlayColors() {
+  const style = getComputedStyle(document.documentElement);
+  return {
+    titleBarBg: style.getPropertyValue('--title-bar-bg').trim(),
+    chatBorder: style.getPropertyValue('--chat-border').trim(),
+  };
+}
+
+// CSS to inject into webview for curve and border effects
+function getOverlayCss() {
+  const colors = getOverlayColors();
+  return `
+    html::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 64px;
+      width: 12px;
+      height: 12px;
+      background: radial-gradient(circle at bottom right, transparent 12px, ${colors.titleBarBg} 12px);
+      z-index: 1;
+      pointer-events: none;
+    }
+    html::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 64px;
+      width: calc(100% - 64px);
+      height: 100%;
+      border-top-left-radius: 12px;
+      border-top: 1px solid ${colors.chatBorder};
+      border-left: 1px solid ${colors.chatBorder};
+      box-sizing: border-box;
+      pointer-events: none;
+      z-index: 1;
+    }
+  `;
+}
+
+async function injectOverlayCss(tabId) {
+  const webview = document.getElementById(`view-${tabId}`);
+  if (!webview) return;
+  try {
+    const css = getOverlayCss();
+    const key = await webview.insertCSS(css);
+    tabCssKeys[tabId] = key;
+  } catch (e) {
+    console.error('Failed to inject overlay CSS:', e);
+  }
+}
+
+async function removeOverlayCss(tabId) {
+  const webview = document.getElementById(`view-${tabId}`);
+  if (!webview || !tabCssKeys[tabId]) return;
+  try {
+    await webview.removeInsertedCSS(tabCssKeys[tabId]);
+    tabCssKeys[tabId] = null;
+  } catch (e) {
+    console.error('Failed to remove overlay CSS:', e);
+  }
+}
 
 function updateOverlaysVisibility() {
-  const isLoaded = activeTabId && tabLoadedStates[activeTabId];
-  const isMediaOpen = activeTabId && tabMediaStates[activeTabId];
-  
-  // Only show overlays if loaded AND media is NOT open
-  const shouldShow = isLoaded && !isMediaOpen;
-  const display = shouldShow ? 'block' : 'none';
-  
+  // Always hide external overlays — effects are now injected into the webview
   const innerCurve = document.getElementById('inner-curve-overlay');
   const chatBorder = document.getElementById('chat-border-overlay');
+  if (innerCurve) innerCurve.style.display = 'none';
+  if (chatBorder) chatBorder.style.display = 'none';
   
-  if (innerCurve) innerCurve.style.display = display;
-  if (chatBorder) chatBorder.style.display = display;
+  const isLoaded = activeTabId && tabLoadedStates[activeTabId];
+  const isMediaOpen = activeTabId && tabMediaStates[activeTabId];
+  const shouldShow = isLoaded && !isMediaOpen;
   
   if (viewsContainer) {
     if (shouldShow) {
       viewsContainer.classList.add('is-loaded');
     } else {
       viewsContainer.classList.remove('is-loaded');
+    }
+  }
+  
+  if (!activeTabId) return;
+  
+  if (shouldShow) {
+    // Inject CSS if not already injected
+    if (!tabCssKeys[activeTabId]) {
+      injectOverlayCss(activeTabId);
+    }
+  } else {
+    // Remove CSS if injected
+    if (tabCssKeys[activeTabId]) {
+      removeOverlayCss(activeTabId);
     }
   }
 }
@@ -201,6 +277,19 @@ function applyTheme(theme) {
   const barColor = activeTheme === 'dark' ? '#1d1f1f' : '#F7F5F3';
   const symbolColor = activeTheme === 'dark' ? '#ffffff' : '#111b21';
   window.electronAPI.setTitleBarColor(barColor, symbolColor);
+  
+  // Re-inject overlay CSS with updated colors for all loaded tabs
+  setTimeout(() => {
+    config.tabs.forEach(tab => {
+      if (tabCssKeys[tab.id]) {
+        removeOverlayCss(tab.id).then(() => {
+          if (tabLoadedStates[tab.id] && !tabMediaStates[tab.id]) {
+            injectOverlayCss(tab.id);
+          }
+        });
+      }
+    });
+  }, 100);
 }
 
 function applyLanguage(lang) {
