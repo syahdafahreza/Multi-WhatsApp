@@ -7,10 +7,16 @@ let activeTabId = null;
 let editingTabId = null;
 let draggedTabId = null;
 let tabLoadedStates = {};
+let tabMediaStates = {};
 
 function updateOverlaysVisibility() {
   const isLoaded = activeTabId && tabLoadedStates[activeTabId];
-  const display = isLoaded ? 'block' : 'none';
+  const isMediaOpen = activeTabId && tabMediaStates[activeTabId];
+  
+  // Only show overlays if loaded AND media is NOT open
+  const shouldShow = isLoaded && !isMediaOpen;
+  const display = shouldShow ? 'block' : 'none';
+  
   const innerCurve = document.getElementById('inner-curve-overlay');
   const chatBorder = document.getElementById('chat-border-overlay');
   
@@ -18,7 +24,7 @@ function updateOverlaysVisibility() {
   if (chatBorder) chatBorder.style.display = display;
   
   if (viewsContainer) {
-    if (isLoaded) {
+    if (shouldShow) {
       viewsContainer.classList.add('is-loaded');
     } else {
       viewsContainer.classList.remove('is-loaded');
@@ -258,9 +264,14 @@ function createTabElements(tab) {
   viewsContainer.appendChild(webview);
   
   tabLoadedStates[tab.id] = false;
+  tabMediaStates[tab.id] = false;
+
+  // We no longer reset state on did-start-loading to prevent flickering during background refreshes.
+  // The state will be updated naturally via dom-ready and console-messages.
 
   webview.addEventListener('dom-ready', () => {
     const script = `
+      // Observer for WA loaded state
       if (!window.__wa_loaded_observer) {
         const checkLoaded = () => document.querySelector('#side') || document.querySelector('#pane-side') || document.querySelector('[data-testid="chat-list"]');
         if (checkLoaded()) {
@@ -275,6 +286,34 @@ function createTabElements(tab) {
           window.__wa_loaded_observer.observe(document.body, { childList: true, subtree: true });
         }
       }
+
+      // Polling-based Media Viewer detection (runs every 500ms)
+      // Uses document.elementFromPoint to check if a media element covers the center of the screen.
+      // This avoids MutationObserver cascading issues that cause false positives.
+      if (!window.__wa_media_poll) {
+        let lastMediaState = false;
+        
+        window.__wa_media_poll = setInterval(() => {
+          const cx = window.innerWidth / 2;
+          const cy = window.innerHeight / 2;
+          const el = document.elementFromPoint(cx, cy);
+          
+          if (!el) return;
+          
+          // When media viewer is open, the center of the screen will be an img, video, or canvas element
+          // During normal chat, the center is text/div elements from the message list
+          const tag = el.tagName;
+          const isMediaElement = (tag === 'IMG' || tag === 'VIDEO' || tag === 'CANVAS');
+          
+          // Also check if the element is large enough to be a viewer (not just a small inline image)
+          const isLarge = isMediaElement && el.offsetWidth > 200 && el.offsetHeight > 200;
+          
+          if (isLarge !== lastMediaState) {
+            lastMediaState = isLarge;
+            console.log(isLarge ? '__WA_MEDIA_OPEN__' : '__WA_MEDIA_CLOSED__');
+          }
+        }, 500);
+      }
     `;
     webview.executeJavaScript(script).catch(e => console.error(e));
   });
@@ -285,6 +324,20 @@ function createTabElements(tab) {
       if (activeTabId === tab.id) {
         updateOverlaysVisibility();
       }
+    } else if (e.message === '__WA_MEDIA_OPEN__') {
+      console.log('[Media Debug] MEDIA OPEN detected for tab:', tab.id);
+      tabMediaStates[tab.id] = true;
+      if (activeTabId === tab.id) {
+        updateOverlaysVisibility();
+      }
+    } else if (e.message === '__WA_MEDIA_CLOSED__') {
+      console.log('[Media Debug] MEDIA CLOSED detected for tab:', tab.id);
+      tabMediaStates[tab.id] = false;
+      if (activeTabId === tab.id) {
+        updateOverlaysVisibility();
+      }
+    } else if (e.message.startsWith('__WA_DEBUG_MEDIA__')) {
+      console.log('[Media Debug]', e.message);
     }
   });
 
