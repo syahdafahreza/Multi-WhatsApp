@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Multi WhatsApp</title>
+  <style>
+    :root {
+      --primary-color: #00a884;
+      --primary-hover: #008f6f;
+      --bg-color: #f0f2f5;
+      --text-color: #333;
+      --title-bar-bg: #00a884;
+      --title-bar-text: #ffffff;
+      --tab-bg: rgba(255, 255, 255, 0.2);
+      --tab-text: rgba(255, 255, 255, 0.9);
+      --tab-hover: rgba(255, 255, 255, 0.3);
+      --tab-active-bg: #f0f2f5;
+      --tab-active-text: #333;
+      --modal-bg: #ffffff;
+      --modal-text: #333;
+      --dropdown-bg: #ffffff;
+      --dropdown-text: #333;
+      --dropdown-hover: #00a884;
+      --dropdown-hover-text: #ffffff;
+      --input-bg: #ffffff;
+      --input-border: #ddd;
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #1d1f1f;
+      --text-color: #e9edef;
+      --title-bar-bg: #1d1f1f;
+      --tab-bg: rgba(255, 255, 255, 0.05);
+      --tab-text: #aebac1;
+      --tab-hover: rgba(255, 255, 255, 0.1);
+      --tab-active-bg: #00a884; /* Active tab stays green as requested */
+      --tab-active-text: #ffffff;
+      --modal-bg: #222e35;
+      --modal-text: #e9edef;
+      --dropdown-bg: #233138;
+      --dropdown-text: #e9edef;
+      --dropdown-hover: #00a884;
+      --dropdown-hover-text: #ffffff;
+      --input-bg: #2a3942;
+      --input-border: #3b4a54;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s;
+      overflow: hidden; /* Prevent body scroll */
+    }
+
+    #title-bar {
+      display: flex;
+      background-color: var(--title-bar-bg);
+      height: 40px;
+      align-items: center;
+      padding-right: 140px; /* Space for Windows control buttons */
+      -webkit-app-region: drag;
+      user-select: none;
+      color: var(--title-bar-text);
+    }
+
+    #hamburger-container {
+      position: relative;
+      -webkit-app-region: no-drag;
+    }
+
+    #hamburger-btn {
+      background: none;
+      border: none;
+      color: inherit;
+      font-size: 20px;
+      padding: 0 15px;
+      cursor: pointer;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #hamburger-btn:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    #tabs-bar {
+      display: flex;
+      flex: 1;
+      height: 100%;
+      align-items: center; /* Centered vertically */
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0 5px;
+    }
+
+    #tabs-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab {
+      padding: 0 15px;
+      margin-right: 2px;
+      background-color: var(--tab-bg);
+      border-radius: 8px; /* Fully rounded corners for a cleaner look when centered */
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      min-width: 140px;
+      max-width: 200px;
+      justify-content: space-between;
+      height: 32px;
+      color: var(--tab-text);
+      font-size: 13px;
+      border: none;
+      position: relative;
+      -webkit-app-region: no-drag;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .tab.active {
+      background-color: var(--tab-active-bg);
+      color: var(--tab-active-text);
+      font-weight: 500;
+    }
+
+    #add-tab-btn {
+      padding: 0 10px;
+      background: none;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 20px;
+      height: 28px;
+      width: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 5px;
+      -webkit-app-region: no-drag;
+    }
+
+    #add-tab-btn:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Hamburger Menu Dropdown */
+    #menu-dropdown {
+      display: none;
+      position: absolute;
+      top: 40px;
+      left: 0;
+      background-color: var(--dropdown-bg);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      border-radius: 0 0 8px 8px;
+      min-width: 220px;
+      max-height: calc(100vh - 50px); /* Autofit height */
+      overflow-y: auto; /* Scrollable if too tall */
+      z-index: 2000;
+      padding: 8px 0;
+      color: var(--dropdown-text);
+    }
+
+    .menu-item {
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .menu-item:hover {
+      background-color: var(--primary-color);
+      color: #ffffff;
+    }
+
+    .menu-separator {
+      height: 1px;
+      background-color: var(--input-border);
+      margin: 8px 0;
+      opacity: 0.5;
+    }
+
+    .menu-submenu-header {
+      padding: 8px 20px 4px;
+      font-size: 11px;
+      color: var(--primary-color);
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    #views-container {
+      flex: 1;
+      position: relative;
+      background-color: var(--bg-color);
+    }
+
+    webview {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
+
+    webview.active {
+      display: flex;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 3000;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+      background-color: var(--modal-bg);
+      color: var(--modal-text);
+      padding: 28px;
+      border-radius: 16px;
+      min-width: 340px;
+      max-width: 550px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+
+    .modal h3 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: var(--primary-color);
+    }
+
+    .modal input, .modal select {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0 20px;
+      box-sizing: border-box;
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      font-size: 14px;
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      outline: none;
+    }
+
+    .modal input:focus, .modal select:focus {
+      border-color: var(--primary-color);
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .modal button {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 8px;
+      font-weight: 600;
+      border: none;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background-color: rgba(128, 128, 128, 0.1);
+      color: var(--text-color);
+    }
+
+    .btn-secondary:hover {
+      background-color: rgba(128, 128, 128, 0.2);
+    }
+
+    .setting-group {
+      margin-bottom: 20px;
+    }
+
+    .setting-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    #about-modal-content {
+      text-align: center;
+    }
+
+    .about-logo {
+      font-size: 56px;
+      margin-bottom: 15px;
+    }
+
+    .about-title {
+      font-size: 28px;
+      font-weight: bold;
+      color: var(--primary-color);
+      margin-bottom: 5px;
+    }
+
+    .about-version {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 10px;
+    }
+
+    .about-description {
+      font-size: 14px;
+      color: var(--text-color);
+      margin-bottom: 25px;
+    }
+
+    .about-developer {
+      margin-bottom: 20px;
+      font-size: 15px;
+    }
+
+    .about-developer a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .about-developer a:hover {
+      text-decoration: underline;
+    }
+
+    .license-container {
+      background-color: rgba(128, 128, 128, 0.05);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 180px;
+      overflow-y: auto;
+      text-align: left;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 11px;
+      color: var(--text-color);
+      opacity: 0.8;
+      margin-top: 20px;
+      white-space: pre-wrap;
+    }
+
+    .tab:hover {
+      background-color: var(--tab-hover);
+    }
+
+    .tab.active:hover {
+      background-color: var(--tab-active-bg);
+    }
+
+    .tab-title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-right: 5px;
+    }
+
+    .close-btn {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: inherit;
+      opacity: 0.6;
+      transition: background-color 0.2s, opacity 0.2s;
+    }
+
+    .close-btn:hover {
+      background-color: rgba(0, 0, 0, 0.1);
+      opacity: 1;
+    }
+
+    /* Drag and drop styles */
+    .tab.dragging {
+      opacity: 0.5;
+      cursor: grabbing;
+    }
+
+    .tab.drag-over {
+      border-left: 3px solid #fff;
+    }
+  </style>
+</head>
+<body>
+  <div id="title-bar">
+    <div id="hamburger-container">
+      <button id="hamburger-btn" title="Menu">☰</button>
+      <div id="menu-dropdown">
+        <div class="menu-submenu-header" id="lang-menu-file">File</div>
+        <div class="menu-item" id="menu-new-tab"><span id="lang-menu-new-tab">New Tab</span> <span>Ctrl+T</span></div>
+        <div class="menu-item" id="menu-settings"><span id="lang-menu-settings">Settings</span></div>
+        <div class="menu-item" id="menu-exit"><span id="lang-menu-exit">Exit</span></div>
+        <div class="menu-separator"></div>
+        <div class="menu-submenu-header" id="lang-menu-edit">Edit</div>
+        <div class="menu-item" id="menu-undo"><span id="lang-menu-undo">Undo</span> <span>Ctrl+Z</span></div>
+        <div class="menu-item" id="menu-redo"><span id="lang-menu-redo">Redo</span> <span>Ctrl+Y</span></div>
+        <div class="menu-separator"></div>
+        <div class="menu-item" id="menu-cut"><span id="lang-menu-cut">Cut</span> <span>Ctrl+X</span></div>
+        <div class="menu-item" id="menu-copy"><span id="lang-menu-copy">Copy</span> <span>Ctrl+C</span></div>
+        <div class="menu-item" id="menu-paste"><span id="lang-menu-paste">Paste</span> <span>Ctrl+V</span></div>
+        <div class="menu-separator"></div>
+        <div class="menu-submenu-header" id="lang-menu-view">View</div>
+        <div class="menu-item" id="menu-reload"><span id="lang-menu-reload">Reload</span> <span>Ctrl+R</span></div>
+        <div class="menu-item" id="menu-devtools"><span id="lang-menu-devtools">Developer Tools</span> <span>F12</span></div>
+        <div class="menu-separator"></div>
+        <div class="menu-submenu-header" id="lang-menu-help">Help</div>
+        <div class="menu-item" id="menu-help"><span id="lang-menu-help-item">Help</span></div>
+        <div class="menu-item" id="menu-about"><span id="lang-menu-about">About</span></div>
+      </div>
+    </div>
+    <div id="tabs-bar">
+      <!-- Tabs will be dynamically added here -->
+      <button id="add-tab-btn" title="Add Account">+</button>
+    </div>
+  </div>
+  
+  <div id="views-container">
+    <!-- Webviews will be dynamically added here -->
+  </div>
+
+  <div id="edit-modal" class="modal">
+    <div id="edit-modal-content" class="modal-content">
+      <h3 id="lang-edit-tab-title">Edit Tab Name</h3>
+      <input type="text" id="tab-name-input" placeholder="Enter tab name">
+      <div class="modal-buttons">
+        <button id="save-tab-name" class="btn-primary"><span id="lang-save">Save</span></button>
+        <button id="cancel-tab-name" class="btn-secondary"><span id="lang-cancel">Cancel</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <h3 id="lang-settings-title">Settings</h3>
+      
+      <div class="setting-group">
+        <label class="setting-label" id="lang-theme-label">Theme</label>
+        <select id="theme-select">
+          <option value="system" id="lang-theme-system">System</option>
+          <option value="light" id="lang-theme-light">Light</option>
+          <option value="dark" id="lang-theme-dark">Dark</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label" id="lang-language-label">Language</label>
+        <select id="language-select">
+          <option value="en-us">English (US)</option>
+          <option value="id-id">Bahasa Indonesia</option>
+        </select>
+      </div>
+
+      <div class="modal-buttons">
+        <button id="save-settings" class="btn-primary"><span id="lang-save-settings">Save</span></button>
+        <button id="close-settings" class="btn-secondary"><span id="lang-close-settings">Close</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="about-modal" class="modal">
+    <div id="about-modal-content" class="modal-content">
+      <img class="about-logo" src="assets/icon.png" width="64" height="64" alt="App Icon">
+      <div class="about-title">Multi-WhatsApp</div>
+      <div class="about-version">Version 1.0.0</div>
+      <div class="about-description" id="lang-about-desc">Multi-WhatsApp is a lightweight, multi-tab desktop application built with Electron that allows you to manage multiple WhatsApp accounts simultaneously in a single window. Perfect for users who need to handle personal, work, and business accounts without switching browsers or profiles.</div>
+      <div class="about-developer">
+        Developed by <a href="#" onclick="window.electronAPI.openExternal('https://github.com/syahdafahreza/')">Syahda Fahreza</a>
+      </div>
+      <div class="license-container" id="license-text">
+MIT License
+
+Copyright (c) 2026 Syahda Fahreza
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+      </div>
+      <div class="modal-buttons">
+        <button id="close-about" class="btn-primary"><span id="lang-close-about">Close</span></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

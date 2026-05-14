@@ -1,0 +1,33 @@
+{
+  "name": "multi-whatsapp",
+  "version": "1.0.0",
+  "description": "Multi tab WhatsApp desktop client",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "make": "electron-builder"
+  },
+  "keywords": [],
+  "author": "Syahda Fahreza",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^42.0.1",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.umarkov.multiwhatsapp",
+    "productName": "Multi-WhatsApp",
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "directories": {
+      "output": "dist"
+    }
+  }
+}

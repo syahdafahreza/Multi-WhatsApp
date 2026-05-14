@@ -1,0 +1,5 @@
+node_modules/
+tabs.json
+electron_output.log
+dist/
+out/
