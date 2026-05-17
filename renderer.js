@@ -372,7 +372,7 @@ function createTabElements(tab) {
       if (!document.getElementById(blurStyleId)) {
         const style = document.createElement('style');
         style.id = blurStyleId;
-        style.textContent = `
+        style.textContent = \`
           /* Sidebar Contact Names */
           body.privacy-blur-enabled #side span[title],
           body.privacy-blur-enabled #side [data-testid="cell-frame-title"],
@@ -465,7 +465,7 @@ function createTabElements(tab) {
           body.privacy-blur-enabled #main header:hover img {
             filter: blur(0px) !important;
           }
-        `;
+        \`;
         document.head.appendChild(style);
       }
       

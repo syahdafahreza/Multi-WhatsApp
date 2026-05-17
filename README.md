@@ -12,6 +12,8 @@ Multi-WhatsApp is a lightweight, multi-tab desktop application built with Electr
 
 - **Multiple Accounts:** Run as many WhatsApp accounts as you need in separate, isolated tabs.
 - **Persistent Sessions:** Each tab uses its own persistent partition, so you stay logged in even after restarting the app.
+- **Incognito Tab Mode:** Open temporary, private WhatsApp sessions (`Ctrl+Shift+N` or `Shift + Click` on `+`) that use in-memory partitions. Their session data is never stored on disk, the tab isn't saved on exit, and they perform an automatic server-side logout when closed. Marked with a distinct `👤` icon.
+- **Privacy Blur:** Protect your privacy in public or shared spaces. When enabled in Settings (`Ctrl+,`), it blurs contact names, message previews, profile photos, and media. Simply hover your cursor over any blurred element to reveal it instantly, with smooth row-based unblurring in the sidebar.
 - **Scrollable Tab Navigation:** Navigation buttons (`<` and `>`) appear dynamically when tabs overflow, allowing easy scrolling.
 - **Tab Context Menu:** Right-click on any tab to quickly rename or close it.
 - **Dynamic UI Styling:** Premium 2026 WhatsApp Web aesthetic with smooth corner clipping and border strokes that apply after loading.
@@ -48,6 +50,8 @@ Multi-WhatsApp is a lightweight, multi-tab desktop application built with Electr
 ## 🛠️ Usage
 
 - **Add a New Account:** Click the `+` button in the tab bar to create a new WhatsApp instance.
+- **Open Incognito Tab:** Press `Ctrl+Shift+N`, select **File > New Incognito Tab** from the hamburger menu, or hold the `Shift` key while clicking the `+` button.
+- **Toggle Privacy Blur:** Press `Ctrl+,` or open the Settings modal from the hamburger menu, then check the **Privacy Blur (Hover to reveal)** option.
 - **Switch Tabs:** Click on any tab to bring that WhatsApp account to focus.
 - **Rename Tabs:** Double-click a tab or use the right-click context menu to open the rename dialog.
 - **Reorder Tabs:** Click and hold a tab, then drag it to its new position.
@@ -80,6 +84,8 @@ Multi-WhatsApp adalah aplikasi desktop multi-tab ringan berbasis Electron yang m
 
 - **Banyak Akun:** Jalankan sebanyak mungkin akun WhatsApp yang Anda butuhkan di tab yang terpisah dan terisolasi.
 - **Sesi Persisten:** Setiap tab menggunakan partisi persistennya sendiri, sehingga Anda tetap masuk bahkan setelah me-restart aplikasi.
+- **Mode Tab Incognito:** Buka sesi WhatsApp privat sementara (`Ctrl+Shift+N` atau `Shift + Klik` pada `+`) menggunakan partisi dalam memori (in-memory). Data sesi tidak akan disimpan di disk, tab tidak disimpan saat aplikasi ditutup, dan otomatis melakukan logout di server saat tab ditutup. Ditandai dengan ikon `👤` khusus.
+- **Blur Privasi (Privacy Blur):** Lindungi privasi Anda di tempat umum atau layar bersama. Ketika diaktifkan di Pengaturan (`Ctrl+,`), fitur ini akan memburamkan nama kontak, pratonton pesan, foto profil, dan media. Cukup arahkan kursor ke elemen yang diburamkan untuk melihatnya secara instan, lengkap dengan fitur unblur berbasis baris di sidebar.
 - **Navigasi Tab Dapat Digulir:** Tombol navigasi (`<` dan `>`) muncul secara dinamis saat tab meluap, memungkinkan pengguliran yang mudah.
 - **Menu Konteks Tab:** Klik kanan pada tab apa saja untuk mengganti nama atau menutupnya dengan cepat.
 - **Desain UI Dinamis:** Estetika WhatsApp Web modern 2026 dengan clipping sudut yang halus dan border stroke yang muncul setelah loading selesai.
@@ -116,6 +122,8 @@ Multi-WhatsApp adalah aplikasi desktop multi-tab ringan berbasis Electron yang m
 ## 🛠️ Penggunaan
 
 - **Tambah Akun Baru:** Klik tombol `+` di bilah tab untuk membuat instans WhatsApp baru.
+- **Buka Tab Incognito:** Gunakan pintasan `Ctrl+Shift+N`, pilih **Berkas > Tab Incognito Baru** dari menu hamburger, atau tahan tombol `Shift` saat mengeklik tombol `+`.
+- **Aktifkan/Matikan Blur Privasi:** Tekan `Ctrl+,` atau buka modal Pengaturan dari menu hamburger, lalu centang opsi **Efek Blur Privasi (Arahkan kursor untuk melihat)**.
 - **Beralih Tab:** Klik tab mana saja untuk fokus ke akun WhatsApp tersebut.
 - **Ganti Nama Tab:** Klik ganda tab atau gunakan menu konteks klik kanan untuk membuka dialog ubah nama.
 - **Susun Ulang Tab:** Klik dan tahan tab, lalu seret ke posisi baru.
