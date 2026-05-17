@@ -176,6 +176,9 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('com.umarkov.multiwhatsapp');
+  }
   createWindow();
 
   app.on('activate', function () {

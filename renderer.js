@@ -1,7 +1,8 @@
 let config = {
   tabs: [],
   theme: 'system',
-  language: 'en-us'
+  language: 'en-us',
+  privacyBlur: false
 };
 let activeTabId = null;
 let editingTabId = null;
@@ -38,6 +39,7 @@ const translations = {
   'en-us': {
     'menu-file': 'File',
     'menu-new-tab': 'New Tab',
+    'menu-new-incognito-tab': 'New Incognito Tab',
     'menu-settings': 'Settings',
     'menu-exit': 'Exit',
     'menu-edit': 'Edit',
@@ -69,11 +71,13 @@ const translations = {
     'ctx-close': 'Close Tab',
     'ctx-reload': 'Reload Tab',
     'window-label': 'Window Management',
-    'reset-window': 'Reset Window Size & Position'
+    'reset-window': 'Reset Window Size & Position',
+    'privacy-blur': 'Privacy Blur (Hover to reveal)'
   },
   'id-id': {
     'menu-file': 'Berkas',
     'menu-new-tab': 'Tab Baru',
+    'menu-new-incognito-tab': 'Tab Incognito Baru',
     'menu-settings': 'Pengaturan',
     'menu-exit': 'Keluar',
     'menu-edit': 'Edit',
@@ -105,7 +109,8 @@ const translations = {
     'ctx-close': 'Tutup Tab',
     'ctx-reload': 'Muat Ulang Tab',
     'window-label': 'Manajemen Jendela',
-    'reset-window': 'Atur Ulang Ukuran & Posisi Jendela'
+    'reset-window': 'Atur Ulang Ukuran & Posisi Jendela',
+    'privacy-blur': 'Efek Blur Privasi (Arahkan kursor untuk melihat)'
   }
 };
 
@@ -127,6 +132,7 @@ const closeAboutBtn = document.getElementById('close-about');
 const settingsModal = document.getElementById('settings-modal');
 const themeSelect = document.getElementById('theme-select');
 const languageSelect = document.getElementById('language-select');
+const privacyBlurCheckbox = document.getElementById('privacy-blur-checkbox');
 const saveSettingsBtn = document.getElementById('save-settings');
 const closeSettingsBtn = document.getElementById('close-settings');
 
@@ -187,7 +193,12 @@ function updateScrollButtonsVisibility() {
 }
 
 function saveConfig() {
-  window.electronAPI.saveConfig(config);
+  // Create a copy of config and filter out incognito tabs
+  const configToSave = {
+    ...config,
+    tabs: config.tabs.filter(tab => !tab.isIncognito)
+  };
+  window.electronAPI.saveConfig(configToSave);
 }
 
 function applyTheme(theme) {
@@ -217,12 +228,17 @@ function generateId() {
   return 'tab_' + Math.random().toString(36).substr(2, 9);
 }
 
-function addNewTab() {
+function addNewTab(isIncognito = false) {
   const id = generateId();
+  const name = isIncognito ? 
+    (config.language === 'id-id' ? `WhatsApp Incognito` : `Incognito WhatsApp`) : 
+    `WhatsApp ${config.tabs.length + 1}`;
+    
   const newTab = {
     id: id,
-    name: `WhatsApp ${config.tabs.length + 1}`,
-    partition: `persist:whatsapp_${id}`
+    name: name,
+    partition: isIncognito ? `whatsapp_incognito_${id}` : `persist:whatsapp_${id}`,
+    isIncognito: isIncognito
   };
   
   config.tabs.push(newTab);
@@ -236,6 +252,7 @@ function createTabElements(tab) {
   // Create tab button
   const tabEl = document.createElement('div');
   tabEl.className = 'tab';
+  if (tab.isIncognito) tabEl.classList.add('is-incognito');
   tabEl.id = `tab-${tab.id}`;
   
   const titleEl = document.createElement('span');
@@ -348,6 +365,106 @@ function createTabElements(tab) {
             console.log(isViewerOpen ? '__WA_MEDIA_OPEN__' : '__WA_MEDIA_CLOSED__');
           }
         }, 500);
+      }
+
+      // Inject Privacy Blur CSS
+      const blurStyleId = 'privacy-blur-style-tag';
+      if (!document.getElementById(blurStyleId)) {
+        const style = document.createElement('style');
+        style.id = blurStyleId;
+        style.textContent = \`
+          /* Sidebar Contact Names */
+          body.privacy-blur-enabled #side span[title],
+          body.privacy-blur-enabled #side [data-testid="cell-frame-title"],
+          
+          /* Sidebar Recent Messages */
+          body.privacy-blur-enabled #side [data-testid="cell-frame-secondary"],
+          body.privacy-blur-enabled #side ._ak8k,
+          
+          /* Header Contact Name */
+          body.privacy-blur-enabled #main header span[title],
+          body.privacy-blur-enabled #main header span[dir="auto"],
+          body.privacy-blur-enabled [data-testid="conversation-info-header-chat-title"],
+          
+          /* Chat Bubble Text */
+          body.privacy-blur-enabled .message-in .copyable-text,
+          body.privacy-blur-enabled .message-out .copyable-text,
+          body.privacy-blur-enabled .message-in .selectable-text,
+          body.privacy-blur-enabled .message-out .selectable-text,
+          body.privacy-blur-enabled div[data-id] .copyable-text,
+          body.privacy-blur-enabled div[data-id] .selectable-text,
+          body.privacy-blur-enabled [data-testid="msg-container"] .selectable-text,
+          
+          /* Profile Pictures and Media */
+          body.privacy-blur-enabled #side img,
+          body.privacy-blur-enabled header img,
+          body.privacy-blur-enabled [data-testid="chat-avatar"] img,
+          body.privacy-blur-enabled img.x1c4vz4f,
+          body.privacy-blur-enabled .message-in img,
+          body.privacy-blur-enabled .message-out img,
+          body.privacy-blur-enabled .message-in video,
+          body.privacy-blur-enabled .message-out video {
+            filter: blur(5px) !important;
+            transition: filter 0.3s ease;
+          }
+          
+          /* Hover to unblur */
+          /* Base Hover to unblur (fallback) */
+          body.privacy-blur-enabled #side span[title]:hover,
+          body.privacy-blur-enabled #side [data-testid="cell-frame-title"]:hover,
+          body.privacy-blur-enabled #side [data-testid="cell-frame-secondary"]:hover,
+          body.privacy-blur-enabled #side ._ak8k:hover,
+          body.privacy-blur-enabled #main header span[title]:hover,
+          body.privacy-blur-enabled #main header span[dir="auto"]:hover,
+          body.privacy-blur-enabled [data-testid="conversation-info-header-chat-title"]:hover,
+          body.privacy-blur-enabled .message-in .copyable-text:hover,
+          body.privacy-blur-enabled .message-out .copyable-text:hover,
+          body.privacy-blur-enabled .message-in .selectable-text:hover,
+          body.privacy-blur-enabled .message-out .selectable-text:hover,
+          body.privacy-blur-enabled div[data-id] .copyable-text:hover,
+          body.privacy-blur-enabled div[data-id] .selectable-text:hover,
+          body.privacy-blur-enabled [data-testid="msg-container"] .selectable-text:hover,
+          body.privacy-blur-enabled #side img:hover,
+          body.privacy-blur-enabled header img:hover,
+          body.privacy-blur-enabled [data-testid="chat-avatar"] img:hover,
+          body.privacy-blur-enabled img.x1c4vz4f:hover,
+          body.privacy-blur-enabled .message-in img:hover,
+          body.privacy-blur-enabled .message-out img:hover,
+          body.privacy-blur-enabled .message-in video:hover,
+          body.privacy-blur-enabled .message-out video:hover,
+          
+          /* Container Hover to unblur (for maps and better UX) */
+          body.privacy-blur-enabled div[role="row"]:hover span[title],
+          body.privacy-blur-enabled div[role="row"]:hover [data-testid="cell-frame-title"],
+          body.privacy-blur-enabled div[role="row"]:hover [data-testid="cell-frame-secondary"],
+          body.privacy-blur-enabled div[role="row"]:hover img,
+          body.privacy-blur-enabled .message-in:hover .copyable-text,
+          body.privacy-blur-enabled .message-out:hover .copyable-text,
+          body.privacy-blur-enabled .message-in:hover .selectable-text,
+          body.privacy-blur-enabled .message-out:hover .selectable-text,
+          body.privacy-blur-enabled div[data-id]:hover .copyable-text,
+          body.privacy-blur-enabled div[data-id]:hover .selectable-text,
+          body.privacy-blur-enabled .message-in:hover img,
+          body.privacy-blur-enabled .message-out:hover img,
+          body.privacy-blur-enabled .message-in:hover video,
+          body.privacy-blur-enabled .message-out:hover video,
+          body.privacy-blur-enabled div[data-id]:hover img,
+          body.privacy-blur-enabled div[data-id]:hover video,
+          body.privacy-blur-enabled #main header:hover span[title],
+          body.privacy-blur-enabled #main header:hover span[dir="auto"],
+          body.privacy-blur-enabled #main header:hover [data-testid="conversation-info-header-chat-title"],
+          body.privacy-blur-enabled #main header:hover img {
+            filter: blur(0px) !important;
+          }
+        \`;
+        document.head.appendChild(style);
+      }
+      
+      // Apply initial privacy blur state
+      if (${config.privacyBlur ? 'true' : 'false'}) {
+        document.body.classList.add('privacy-blur-enabled');
+      } else {
+        document.body.classList.remove('privacy-blur-enabled');
       }
     `;
     webview.executeJavaScript(script).catch(e => console.error(e));
@@ -487,23 +604,79 @@ function closeTab(id) {
   const tabIndex = config.tabs.findIndex(t => t.id === id);
   if (tabIndex === -1) return;
   
+  const tab = config.tabs[tabIndex];
+  
   // Remove elements
   const tabEl = document.getElementById(`tab-${id}`);
   const viewEl = document.getElementById(`view-${id}`);
   
-  if (tabEl) tabEl.remove();
-  if (viewEl) viewEl.remove();
-  
-  // Update state
-  config.tabs.splice(tabIndex, 1);
-  saveConfig();
-  
-  // Switch to another tab if the active one was closed
-  if (activeTabId === id && config.tabs.length > 0) {
-    const newIndex = Math.min(tabIndex, config.tabs.length - 1);
-    switchTab(config.tabs[newIndex].id);
+  const performRemoval = () => {
+    if (tabEl) tabEl.remove();
+    if (viewEl) viewEl.remove();
+    
+    // Update state
+    config.tabs.splice(tabIndex, 1);
+    saveConfig();
+    
+    // Switch to another tab if the active one was closed
+    if (activeTabId === id && config.tabs.length > 0) {
+      const newIndex = Math.min(tabIndex, config.tabs.length - 1);
+      switchTab(config.tabs[newIndex].id);
+    }
+    updateScrollButtonsVisibility();
+  };
+
+  if (tab.isIncognito && viewEl) {
+    // Hide the tab immediately for better UX
+    if (tabEl) tabEl.style.display = 'none';
+    
+    // Attempt to logout before removal
+    const logoutScript = `
+      (function() {
+        try {
+          // Find the menu button
+          const menuBtn = document.querySelector('[data-testid="menu"]') || 
+                          document.querySelector('[title="Menu"]') || 
+                          document.querySelector('button[aria-label="Menu"]');
+          
+          if (menuBtn) {
+            menuBtn.click();
+            
+            // Wait for menu to appear and click logout
+            setTimeout(() => {
+              const items = Array.from(document.querySelectorAll('div[role="button"]'));
+              const logoutItem = items.find(el => {
+                const text = el.textContent.toLowerCase();
+                return text.includes('log out') || text.includes('keluar') || text.includes('déconnexion') || text.includes('cerrar sesión');
+              });
+              
+              if (logoutItem) {
+                logoutItem.click();
+                
+                // Wait for confirmation dialog and click confirm
+                setTimeout(() => {
+                  const confirmBtn = document.querySelector('button[data-testid="popup-controls-ok"]') || 
+                                     Array.from(document.querySelectorAll('button')).find(el => {
+                                       const text = el.textContent.toLowerCase();
+                                       return text.includes('log out') || text.includes('keluar') || text.includes('ok');
+                                     });
+                  if (confirmBtn) confirmBtn.click();
+                }, 500);
+              }
+            }, 500);
+          }
+        } catch (e) {
+          console.error('Logout failed:', e);
+        }
+      })();
+    `;
+    viewEl.executeJavaScript(logoutScript).catch(e => console.error('Logout script error:', e));
+    
+    // Wait a bit for the logout sequence to at least start before destroying the webview
+    setTimeout(performRemoval, 1500);
+  } else {
+    performRemoval();
   }
-  updateScrollButtonsVisibility();
 }
 
 // Modal functions
@@ -543,6 +716,7 @@ function saveEditedTabName() {
 function openSettingsModal() {
   themeSelect.value = config.theme;
   languageSelect.value = config.language;
+  if (privacyBlurCheckbox) privacyBlurCheckbox.checked = !!config.privacyBlur;
   settingsModal.style.display = 'flex';
 }
 
@@ -550,15 +724,34 @@ function closeSettingsModal() {
   settingsModal.style.display = 'none';
 }
 
+function applyPrivacyBlurToAll(enabled) {
+  const views = document.querySelectorAll('webview');
+  views.forEach(view => {
+    if (view.executeJavaScript) {
+      const script = `
+        if (${enabled}) {
+          document.body.classList.add('privacy-blur-enabled');
+        } else {
+          document.body.classList.remove('privacy-blur-enabled');
+        }
+      `;
+      view.executeJavaScript(script).catch(e => console.error(e));
+    }
+  });
+}
+
 function saveSettings() {
   const newTheme = themeSelect.value;
   const newLang = languageSelect.value;
+  const newPrivacyBlur = privacyBlurCheckbox ? privacyBlurCheckbox.checked : false;
   
   config.theme = newTheme;
   config.language = newLang;
+  config.privacyBlur = newPrivacyBlur;
   
   applyTheme(newTheme);
   applyLanguage(newLang);
+  applyPrivacyBlurToAll(newPrivacyBlur);
   saveConfig();
   closeSettingsModal();
 }
@@ -690,6 +883,11 @@ document.getElementById('menu-new-tab').addEventListener('click', () => {
   closeMenu();
 });
 
+document.getElementById('menu-new-incognito-tab').addEventListener('click', () => {
+  addNewTab(true);
+  closeMenu();
+});
+
 document.getElementById('menu-settings').addEventListener('click', () => {
   openSettingsModal();
   closeMenu();
@@ -772,7 +970,9 @@ saveSettingsBtn.addEventListener('click', saveSettings);
 closeSettingsBtn.addEventListener('click', closeSettingsModal);
 
 // Original Event Listeners
-addTabBtn.addEventListener('click', addNewTab);
+addTabBtn.addEventListener('click', (e) => {
+  addNewTab(e.shiftKey);
+});
 
 scrollLeftBtn.addEventListener('click', () => {
   tabsBar.scrollBy({ left: -200, behavior: 'smooth' });
@@ -810,6 +1010,11 @@ document.addEventListener('keydown', (e) => {
     switch (e.key.toLowerCase()) {
       case 't':
         addNewTab();
+        break;
+      case 'n':
+        if (e.shiftKey) {
+          addNewTab(true);
+        }
         break;
       case 'w':
         if (activeTabId) closeTab(activeTabId);
