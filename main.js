@@ -177,7 +177,8 @@ function createWindow() {
 
 app.whenReady().then(() => {
   if (process.platform === 'win32') {
-    app.setAppUserModelId('com.umarkov.multiwhatsapp');
+    // Gunakan App ID dinamis saat tahap development untuk menghindari cache ikon Windows
+    app.setAppUserModelId(app.isPackaged ? 'com.umarkov.multiwhatsapp' : 'com.umarkov.multiwhatsapp.dev.' + Date.now());
   }
   createWindow();
 
