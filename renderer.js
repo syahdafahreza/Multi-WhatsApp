@@ -372,14 +372,17 @@ function createTabElements(tab) {
       if (!document.getElementById(blurStyleId)) {
         const style = document.createElement('style');
         style.id = blurStyleId;
-        style.textContent = \`
+        style.textContent = `
           /* Sidebar Contact Names */
           body.privacy-blur-enabled #side span[title],
           body.privacy-blur-enabled #side [data-testid="cell-frame-title"],
           
-          /* Sidebar Recent Messages */
+          /* Sidebar Recent Messages and Chat Time */
           body.privacy-blur-enabled #side [data-testid="cell-frame-secondary"],
           body.privacy-blur-enabled #side ._ak8k,
+          body.privacy-blur-enabled #side ._ak8i,
+          body.privacy-blur-enabled #side [class*="time"],
+          body.privacy-blur-enabled #side [class*="status-time"],
           
           /* Header Contact Name */
           body.privacy-blur-enabled #main header span[title],
@@ -414,6 +417,9 @@ function createTabElements(tab) {
           body.privacy-blur-enabled #side [data-testid="cell-frame-title"]:hover,
           body.privacy-blur-enabled #side [data-testid="cell-frame-secondary"]:hover,
           body.privacy-blur-enabled #side ._ak8k:hover,
+          body.privacy-blur-enabled #side ._ak8i:hover,
+          body.privacy-blur-enabled #side [class*="time"]:hover,
+          body.privacy-blur-enabled #side [class*="status-time"]:hover,
           body.privacy-blur-enabled #main header span[title]:hover,
           body.privacy-blur-enabled #main header span[dir="auto"]:hover,
           body.privacy-blur-enabled [data-testid="conversation-info-header-chat-title"]:hover,
@@ -437,6 +443,9 @@ function createTabElements(tab) {
           body.privacy-blur-enabled div[role="row"]:hover span[title],
           body.privacy-blur-enabled div[role="row"]:hover [data-testid="cell-frame-title"],
           body.privacy-blur-enabled div[role="row"]:hover [data-testid="cell-frame-secondary"],
+          body.privacy-blur-enabled div[role="row"]:hover ._ak8i,
+          body.privacy-blur-enabled div[role="row"]:hover [class*="time"],
+          body.privacy-blur-enabled div[role="row"]:hover [class*="status-time"],
           body.privacy-blur-enabled div[role="row"]:hover img,
           body.privacy-blur-enabled .message-in:hover .copyable-text,
           body.privacy-blur-enabled .message-out:hover .copyable-text,
@@ -456,7 +465,7 @@ function createTabElements(tab) {
           body.privacy-blur-enabled #main header:hover img {
             filter: blur(0px) !important;
           }
-        \`;
+        `;
         document.head.appendChild(style);
       }
       

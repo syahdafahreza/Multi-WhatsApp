@@ -3,3 +3,4 @@ tabs.json
 electron_output.log
 dist/
 out/
+extensions/
