@@ -310,6 +310,9 @@
       left: 0;
       visibility: hidden;
       border: none;
+      transform: translateZ(0);
+      will-change: transform;
+      contain: strict;
     }
 
     webview.active {
@@ -1329,6 +1332,7 @@ SOFTWARE.
     </div>
   </div>
 
+  <script src="tauri-bridge.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

@@ -1,0 +1,52 @@
+name: Build Tauri Windows Binary
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-tauri:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install Frontend & Tauri CLI dependencies
+        run: npm install
+
+      - name: Build Tauri App (.exe & Installer)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'Multi-WhatsApp v__VERSION__'
+          releaseBody: 'Automated Tauri build for Windows.'
+          releaseDraft: true
+          prerelease: false
+
+      - name: Upload Artifacts (Standalone .exe & Installers)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Multi-WhatsApp-Tauri-Windows
+          path: |
+            src-tauri/target/release/*.exe
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: warn

@@ -4,14 +4,21 @@
   "description": "Multi tab WhatsApp desktop client",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "build": "electron-builder",
-    "make": "electron-builder"
+    "start": "tauri dev",
+    "tauri": "tauri",
+    "build": "tauri build",
+    "start:electron": "electron .",
+    "build:electron": "electron-builder",
+    "make:electron": "electron-builder"
   },
   "keywords": [],
   "author": "Syahda Fahreza",
   "license": "MIT",
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0"
+  },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
     "electron": "^42.0.1",
     "electron-builder": "^25.0.0"
   },
