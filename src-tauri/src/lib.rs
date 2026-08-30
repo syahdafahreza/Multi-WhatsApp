@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Mutex;
 use tauri::{
     AppHandle, LogicalPosition, LogicalSize, Manager, Position, Rect, Size, WebviewBuilder,
     WebviewUrl,
@@ -7,6 +8,11 @@ use tauri::{
 
 const CHROME_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 const TOP_BAR_HEIGHT: f64 = 48.0;
+
+#[derive(Default)]
+struct AppState {
+    active_tab: Mutex<Option<String>>,
+}
 
 fn get_config_path(app: &AppHandle) -> PathBuf {
     let app_dir = app
@@ -75,7 +81,7 @@ fn reload_window(app: AppHandle) {
 
 #[tauri::command]
 fn reset_window(app: AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
+    if let Some(window) = app.get_window("main") {
         let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize {
             width: 1200.0,
             height: 800.0,
@@ -88,6 +94,7 @@ fn reset_window(app: AppHandle) {
 #[tauri::command]
 fn create_tab_webview(
     app: AppHandle,
+    state: tauri::State<AppState>,
     tab_id: String,
     is_incognito: bool,
     url: Option<String>,
@@ -95,10 +102,10 @@ fn create_tab_webview(
     let target_url = url.unwrap_or_else(|| "https://web.whatsapp.com".to_string());
     let parsed_url: url::Url = target_url.parse().map_err(|e: url::ParseError| e.to_string())?;
 
-    if let Some(window) = app.get_webview_window("main") {
+    if let Some(window) = app.get_window("main") {
         let label = format!("tab-{}", tab_id);
         if app.get_webview(&label).is_some() {
-            switch_tab_webview(app, tab_id)?;
+            switch_tab_webview(app, state, tab_id)?;
             return Ok(());
         }
 
@@ -132,15 +139,19 @@ fn create_tab_webview(
             .add_child(builder, pos, size)
             .map_err(|e| e.to_string())?;
 
-        switch_tab_webview(app, tab_id)?;
+        switch_tab_webview(app, state, tab_id)?;
     }
     Ok(())
 }
 
 #[tauri::command]
-fn switch_tab_webview(app: AppHandle, tab_id: String) -> Result<(), String> {
+fn switch_tab_webview(
+    app: AppHandle,
+    state: tauri::State<AppState>,
+    tab_id: String,
+) -> Result<(), String> {
     let target_label = format!("tab-{}", tab_id);
-    if let Some(window) = app.get_webview_window("main") {
+    if let Some(window) = app.get_window("main") {
         let win_size = window
             .inner_size()
             .unwrap_or(tauri::PhysicalSize::new(1200, 800));
@@ -148,6 +159,8 @@ fn switch_tab_webview(app: AppHandle, tab_id: String) -> Result<(), String> {
         let logical_w = win_size.width as f64 / scale;
         let logical_h = win_size.height as f64 / scale;
         let content_h = (logical_h - TOP_BAR_HEIGHT).max(100.0);
+
+        *state.active_tab.lock().unwrap() = Some(tab_id);
 
         for (label, webview) in app.webviews() {
             if label.starts_with("tab-") {
@@ -208,10 +221,16 @@ fn eval_tab_webview(app: AppHandle, tab_id: String, script: String) -> Result<()
 }
 
 #[tauri::command]
-fn resize_tab_webviews(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
+fn resize_tab_webviews(
+    app: AppHandle,
+    state: tauri::State<AppState>,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
     let content_h = (height - TOP_BAR_HEIGHT).max(100.0);
-    for (label, webview) in app.webviews() {
-        if label.starts_with("tab-") && webview.is_visible().unwrap_or(false) {
+    if let Some(active_id) = state.active_tab.lock().unwrap().as_ref() {
+        let label = format!("tab-{}", active_id);
+        if let Some(webview) = app.get_webview(&label) {
             let _ = webview.set_bounds(Rect {
                 position: Position::Logical(LogicalPosition::new(0.0, TOP_BAR_HEIGHT)),
                 size: Size::Logical(LogicalSize::new(width, content_h)),
@@ -225,7 +244,7 @@ fn resize_tab_webviews(app: AppHandle, width: f64, height: f64) -> Result<(), St
 fn set_tab_zoom(app: AppHandle, tab_id: String, factor: f64) -> Result<(), String> {
     let label = format!("tab-{}", tab_id);
     if let Some(webview) = app.get_webview(&label) {
-        let _ = webview.set_zoom_factor(factor);
+        let _ = webview.set_zoom(factor);
     }
     Ok(())
 }
@@ -246,6 +265,7 @@ fn set_tab_muted(app: AppHandle, tab_id: String, muted: bool) -> Result<(), Stri
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(AppState::default())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
