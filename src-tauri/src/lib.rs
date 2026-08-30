@@ -12,6 +12,7 @@ const TOP_BAR_HEIGHT: f64 = 48.0;
 #[derive(Default)]
 struct AppState {
     active_tab: Mutex<Option<String>>,
+    is_modal_open: Mutex<bool>,
 }
 
 fn get_config_path(app: &AppHandle) -> PathBuf {
@@ -70,6 +71,42 @@ fn open_external(url: String) -> Result<(), String> {
 #[tauri::command]
 fn exit_app(app: AppHandle) {
     app.exit(0);
+}
+
+#[tauri::command]
+fn minimize_window(app: AppHandle) {
+    if let Some(window) = app.get_window("main") {
+        let _ = window.minimize();
+    }
+}
+
+#[tauri::command]
+fn toggle_maximize_window(app: AppHandle) {
+    if let Some(window) = app.get_window("main") {
+        if window.is_maximized().unwrap_or(false) {
+            let _ = window.unmaximize();
+        } else {
+            let _ = window.maximize();
+        }
+    }
+}
+
+#[tauri::command]
+fn close_window(app: AppHandle) {
+    if let Some(window) = app.get_window("main") {
+        let _ = window.close();
+    }
+}
+
+#[tauri::command]
+fn confirm_dialog(app: AppHandle, title: String, message: String) -> bool {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+    app.dialog()
+        .message(message)
+        .title(title)
+        .kind(MessageDialogKind::Warning)
+        .buttons(MessageDialogButtons::OkCancel)
+        .blocking_show()
 }
 
 #[tauri::command]
@@ -161,6 +198,16 @@ fn switch_tab_webview(
         let content_h = (logical_h - TOP_BAR_HEIGHT).max(100.0);
 
         *state.active_tab.lock().unwrap() = Some(tab_id);
+        let is_modal = *state.is_modal_open.lock().unwrap();
+
+        // Ensure main webview top bar bounds
+        if let Some(main_webview) = app.get_webview("main") {
+            let main_h = if is_modal { logical_h } else { TOP_BAR_HEIGHT };
+            let _ = main_webview.set_bounds(Rect {
+                position: Position::Logical(LogicalPosition::new(0.0, 0.0)),
+                size: Size::Logical(LogicalSize::new(logical_w, main_h)),
+            });
+        }
 
         for (label, webview) in app.webviews() {
             if label.starts_with("tab-") {
@@ -170,7 +217,9 @@ fn switch_tab_webview(
                         size: Size::Logical(LogicalSize::new(logical_w, content_h)),
                     });
                     let _ = webview.show();
-                    let _ = webview.set_focus();
+                    if !is_modal {
+                        let _ = webview.set_focus();
+                    }
                 } else {
                     let _ = webview.hide();
                     let _ = webview.set_bounds(Rect {
@@ -185,10 +234,56 @@ fn switch_tab_webview(
 }
 
 #[tauri::command]
-fn close_tab_webview(app: AppHandle, tab_id: String) -> Result<(), String> {
+fn set_modal_open(
+    app: AppHandle,
+    state: tauri::State<AppState>,
+    is_open: bool,
+) -> Result<(), String> {
+    *state.is_modal_open.lock().unwrap() = is_open;
+    if let Some(window) = app.get_window("main") {
+        let win_size = window
+            .inner_size()
+            .unwrap_or(tauri::PhysicalSize::new(1200, 800));
+        let scale = window.scale_factor().unwrap_or(1.0);
+        let logical_w = win_size.width as f64 / scale;
+        let logical_h = win_size.height as f64 / scale;
+
+        if let Some(main_webview) = app.get_webview("main") {
+            let main_h = if is_open { logical_h } else { TOP_BAR_HEIGHT };
+            let _ = main_webview.set_bounds(Rect {
+                position: Position::Logical(LogicalPosition::new(0.0, 0.0)),
+                size: Size::Logical(LogicalSize::new(logical_w, main_h)),
+            });
+            if is_open {
+                let _ = main_webview.set_focus();
+            }
+        }
+
+        if !is_open {
+            if let Some(active_id) = state.active_tab.lock().unwrap().as_ref() {
+                let label = format!("tab-{}", active_id);
+                if let Some(webview) = app.get_webview(&label) {
+                    let _ = webview.set_focus();
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn close_tab_webview(
+    app: AppHandle,
+    state: tauri::State<AppState>,
+    tab_id: String,
+) -> Result<(), String> {
     let label = format!("tab-{}", tab_id);
     if let Some(webview) = app.get_webview(&label) {
         let _ = webview.close();
+    }
+    let mut active = state.active_tab.lock().unwrap();
+    if active.as_deref() == Some(&tab_id) {
+        *active = None;
     }
     Ok(())
 }
@@ -228,6 +323,16 @@ fn resize_tab_webviews(
     height: f64,
 ) -> Result<(), String> {
     let content_h = (height - TOP_BAR_HEIGHT).max(100.0);
+    let is_modal = *state.is_modal_open.lock().unwrap();
+
+    if let Some(main_webview) = app.get_webview("main") {
+        let main_h = if is_modal { height } else { TOP_BAR_HEIGHT };
+        let _ = main_webview.set_bounds(Rect {
+            position: Position::Logical(LogicalPosition::new(0.0, 0.0)),
+            size: Size::Logical(LogicalSize::new(width, main_h)),
+        });
+    }
+
     if let Some(active_id) = state.active_tab.lock().unwrap().as_ref() {
         let label = format!("tab-{}", active_id);
         if let Some(webview) = app.get_webview(&label) {
@@ -280,10 +385,15 @@ pub fn run() {
             save_config,
             open_external,
             exit_app,
+            minimize_window,
+            toggle_maximize_window,
+            close_window,
+            confirm_dialog,
             reload_window,
             reset_window,
             create_tab_webview,
             switch_tab_webview,
+            set_modal_open,
             close_tab_webview,
             reload_tab_webview,
             load_url_tab_webview,

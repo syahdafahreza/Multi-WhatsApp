@@ -28,7 +28,17 @@
       updateBadge: () => {},
       selectDownloadDir: async () => '',
       showConfirmDialog: async (options) => {
-        return window.confirm(options.message || 'Are you sure?');
+        try {
+          return await invoke('confirm_dialog', {
+            title: options.title || 'Multi-WhatsApp',
+            message: options.message || 'Are you sure?'
+          });
+        } catch (e) {
+          return window.confirm(options.message || 'Are you sure?');
+        }
+      },
+      setModalOpen: (isOpen) => {
+        invoke('set_modal_open', { isOpen: !!isOpen }).catch(() => {});
       },
       copyImageToClipboard: async (dataUrl) => {
         try {
@@ -77,7 +87,7 @@
         // Fire dom-ready event to trigger injections in renderer.js
         setTimeout(() => {
           this.dispatchEvent(new Event('dom-ready'));
-        }, 300);
+        }, 400);
       }
 
       disconnectedCallback() {
@@ -154,6 +164,29 @@
         width: window.innerWidth,
         height: window.innerHeight
       }).catch(() => {});
+    });
+
+    // Wire Window Control Buttons
+    document.addEventListener('DOMContentLoaded', () => {
+      const minBtn = document.getElementById('win-min-btn');
+      const maxBtn = document.getElementById('win-max-btn');
+      const closeBtn = document.getElementById('win-close-btn');
+
+      if (minBtn) {
+        minBtn.addEventListener('click', () => invoke('minimize_window').catch(() => {}));
+      }
+      if (maxBtn) {
+        maxBtn.addEventListener('click', () => invoke('toggle_maximize_window').catch(() => {}));
+      }
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+          if (window.electronAPI && window.electronAPI.exit) {
+            window.electronAPI.exit();
+          } else {
+            invoke('close_window').catch(() => {});
+          }
+        });
+      }
     });
   }
 })();
