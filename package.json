@@ -4,6 +4,7 @@
   "description": "Multi tab WhatsApp desktop client",
   "main": "main.js",
   "scripts": {
+    "prepare:dist": "node scripts/prepare-dist.js",
     "start": "tauri dev",
     "tauri": "tauri",
     "build": "tauri build",
