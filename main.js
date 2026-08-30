@@ -2,15 +2,6 @@ const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage, dialog, sh
 const path = require('path');
 const fs = require('fs');
 
-// Enable GPU Hardware Acceleration & Chromium Rendering Optimizations
-app.commandLine.appendSwitch('enable-gpu-rasterization');
-app.commandLine.appendSwitch('enable-zero-copy');
-app.commandLine.appendSwitch('ignore-gpu-blocklist');
-app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
-app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization,VaapiVideoDecoder');
-app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
-app.commandLine.appendSwitch('enable-smooth-scrolling');
-
 const userDataPath = app.getPath('userData');
 const configPath = path.join(userDataPath, 'config.json');
 const windowStatePath = path.join(userDataPath, 'window-state.json');

@@ -2,9 +2,6 @@ node_modules/
 tabs.json
 electron_output.log
 dist/
-dist_app/
 out/
 extensions/
 temp/
-src-tauri/target/
-src-tauri/runtimes/

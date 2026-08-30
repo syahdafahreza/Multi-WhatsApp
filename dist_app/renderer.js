@@ -763,7 +763,7 @@ function createTabElements(tab) {
   webview.partition = tab.isIncognito ? `memory:incognito-${tab.id}` : `persist:tab-${tab.id}`;
   webview.setAttribute('allowpopups', 'true');
   webview.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36');
-  webview.setAttribute('webpreferences', 'contextIsolation=false');
+  webview.setAttribute('webpreferences', 'contextIsolation=false, spellcheck=false, backgroundThrottling=true');
 
   if (tab.isMuted) {
     webview.setAudioMuted(true);

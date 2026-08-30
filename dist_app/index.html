@@ -293,6 +293,38 @@
       color: var(--text-color);
     }
 
+    #window-controls {
+      display: flex;
+      align-items: center;
+      height: 100%;
+      -webkit-app-region: no-drag;
+      margin-left: auto;
+      z-index: 100;
+    }
+
+    .win-control-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-color, #aebac1);
+      width: 44px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.15s, color 0.15s;
+    }
+
+    .win-control-btn:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+    }
+
+    .win-control-btn.close:hover {
+      background-color: #e81123 !important;
+      color: #ffffff !important;
+    }
+
     #views-container {
       flex: 1;
       position: relative;
@@ -310,6 +342,9 @@
       left: 0;
       visibility: hidden;
       border: none;
+      transform: translateZ(0);
+      will-change: transform;
+      contain: strict;
     }
 
     webview.active {
@@ -862,6 +897,17 @@
       <button id="add-tab-btn" title="Add Account">+</button>
     </div>
     <button id="scroll-right-btn" class="scroll-btn" title="Scroll Right">&#10095;</button>
+    <div id="window-controls">
+      <button class="win-control-btn" id="win-min-btn" title="Minimize">
+        <svg width="10" height="1" viewBox="0 0 10 1"><path d="M0 0h10v1H0z" fill="currentColor"/></svg>
+      </button>
+      <button class="win-control-btn" id="win-max-btn" title="Maximize">
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0v10h10V0H0zm9 9H1V1h8v8z" fill="currentColor"/></svg>
+      </button>
+      <button class="win-control-btn close" id="win-close-btn" title="Close">
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 0L0 1l4 4-4 4 1 1 4-4 4 4 1-1-4-4 4-4-1-1-4 4-4-4z" fill="currentColor"/></svg>
+      </button>
+    </div>
   </div>
 
   <!-- Webviews Container -->
@@ -1329,6 +1375,7 @@ SOFTWARE.
     </div>
   </div>
 
+  <script src="tauri-bridge.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>
