@@ -4,3 +4,4 @@ electron_output.log
 dist/
 out/
 extensions/
+temp/
