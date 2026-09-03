@@ -262,6 +262,7 @@ const scrollRightBtn = document.getElementById('scroll-right-btn');
 // Menu elements
 const hamburgerBtn = document.getElementById('hamburger-btn');
 const menuDropdown = document.getElementById('menu-dropdown');
+const menuBackdrop = document.getElementById('menu-backdrop');
 const tabContextMenu = document.getElementById('tab-context-menu');
 let contextMenuTabId = null;
 
@@ -364,20 +365,37 @@ const WEBVIEW_INJECT_SCRIPT = `
     }
   });
 
-  // Context Menu Detection for Images and Media
+  // Context Menu Detection for Images and Media (Media Viewer or direct media click)
   document.addEventListener('contextmenu', (e) => {
     let target = e.target;
     let imgEl = null;
 
+    // Check if target is inside WhatsApp's media viewer modal/overlay
+    const inMediaViewer = !!(
+      target.closest('[data-animate-media-viewer="true"]') ||
+      target.closest('[role="dialog"]') ||
+      target.closest('[data-testid="media-viewer"]') ||
+      target.closest('#app > div > div > div[tabindex="-1"]') ||
+      target.closest('div[aria-label*="Media"], div[aria-label*="Foto"], div[aria-label*="Video"]')
+    );
+
     if (target.tagName === 'IMG') {
       imgEl = target;
-    } else {
-      imgEl = target.closest('img') || target.querySelector('img');
-      if (!imgEl && target.tagName === 'CANVAS') {
-        imgEl = target;
-      }
-      if (!imgEl && (target.tagName === 'VIDEO' || target.closest('video'))) {
-        imgEl = target.tagName === 'VIDEO' ? target : target.closest('video');
+    } else if (target.tagName === 'CANVAS') {
+      imgEl = target;
+    } else if (target.tagName === 'VIDEO') {
+      imgEl = target;
+    } else if (inMediaViewer) {
+      // If clicking inside the media viewer overlay, find the viewed media element
+      imgEl = target.closest('img') || target.querySelector('img') || target.querySelector('canvas') || target.closest('video') || target.querySelector('video');
+    }
+
+    // Ignore tiny images such as emojis, avatars, or icons unless user is explicitly in media viewer
+    if (imgEl && !inMediaViewer && imgEl.tagName === 'IMG') {
+      const rect = imgEl.getBoundingClientRect();
+      // Emojis and small icons in chat are usually <= 36px
+      if (rect.width < 50 || rect.height < 50) {
+        imgEl = null;
       }
     }
 
@@ -1159,6 +1177,7 @@ function showTabContextMenu(x, y, tabId) {
   tabContextMenu.style.left = `${Math.min(x, window.innerWidth - 200)}px`;
   tabContextMenu.style.top = `${Math.min(y, window.innerHeight - 180)}px`;
   tabContextMenu.style.display = 'block';
+  if (menuBackdrop) menuBackdrop.style.display = 'block';
 }
 
 function showImageContextMenu(x, y, data) {
@@ -1177,16 +1196,35 @@ function showImageContextMenu(x, y, data) {
   imageContextMenu.style.left = `${Math.min(x, window.innerWidth - 220)}px`;
   imageContextMenu.style.top = `${Math.min(y, window.innerHeight - 180)}px`;
   imageContextMenu.style.display = 'block';
+  if (menuBackdrop) menuBackdrop.style.display = 'block';
 }
 
 function hideContextMenus() {
   if (tabContextMenu) tabContextMenu.style.display = 'none';
   if (imageContextMenu) imageContextMenu.style.display = 'none';
   if (menuDropdown) menuDropdown.style.display = 'none';
+  if (menuBackdrop) menuBackdrop.style.display = 'none';
 }
 
 // Event Listeners Setup
 function setupEventListeners() {
+  // Global Backdrop Click / Pointerdown to dismiss menus over webviews and elsewhere
+  if (menuBackdrop) {
+    menuBackdrop.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      hideContextMenus();
+    });
+    menuBackdrop.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hideContextMenus();
+    });
+    menuBackdrop.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hideContextMenus();
+    });
+  }
+
   // Global Click to dismiss menus
   document.addEventListener('click', (e) => {
     if (!hamburgerBtn.contains(e.target) && !menuDropdown.contains(e.target)) {
@@ -1197,6 +1235,11 @@ function setupEventListeners() {
     }
     if (!imageContextMenu.contains(e.target)) {
       imageContextMenu.style.display = 'none';
+    }
+    if (menuDropdown.style.display === 'none' && 
+        tabContextMenu.style.display === 'none' && 
+        imageContextMenu.style.display === 'none') {
+      if (menuBackdrop) menuBackdrop.style.display = 'none';
     }
   });
 
@@ -1239,7 +1282,15 @@ function setupEventListeners() {
   // Hamburger Toggle
   hamburgerBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    menuDropdown.style.display = menuDropdown.style.display === 'block' ? 'none' : 'block';
+    const isOpen = menuDropdown.style.display === 'block';
+    if (isOpen) {
+      menuDropdown.style.display = 'none';
+      if (menuBackdrop) menuBackdrop.style.display = 'none';
+    } else {
+      hideContextMenus();
+      menuDropdown.style.display = 'block';
+      if (menuBackdrop) menuBackdrop.style.display = 'block';
+    }
   });
 
   // Add Tab
@@ -1265,7 +1316,7 @@ function setupEventListeners() {
 
   // New Chat Modal
   document.getElementById('menu-start-new-chat').addEventListener('click', () => {
-    menuDropdown.style.display = 'none';
+    hideContextMenus();
     openNewChatModal();
   });
   document.getElementById('close-new-chat-btn').addEventListener('click', () => newChatModal.classList.remove('active'));
@@ -1296,18 +1347,18 @@ function setupEventListeners() {
   // Menu Items
   document.getElementById('menu-new-tab').addEventListener('click', () => {
     addNewTab(false);
-    menuDropdown.style.display = 'none';
+    hideContextMenus();
   });
   document.getElementById('menu-new-incognito-tab').addEventListener('click', () => {
     addNewTab(true);
-    menuDropdown.style.display = 'none';
+    hideContextMenus();
   });
   document.getElementById('menu-theme-manager').addEventListener('click', () => {
-    menuDropdown.style.display = 'none';
+    hideContextMenus();
     openThemeManagerModal();
   });
   document.getElementById('menu-settings').addEventListener('click', () => {
-    menuDropdown.style.display = 'none';
+    hideContextMenus();
     openSettingsModal();
   });
   document.getElementById('menu-exit').addEventListener('click', () => {
@@ -1316,11 +1367,11 @@ function setupEventListeners() {
   document.getElementById('menu-reload').addEventListener('click', () => {
     const webview = getActiveWebview();
     if (webview) webview.reload();
-    menuDropdown.style.display = 'none';
+    hideContextMenus();
   });
   document.getElementById('menu-devtools').addEventListener('click', () => {
     window.electronAPI.toggleDevTools();
-    menuDropdown.style.display = 'none';
+    hideContextMenus();
   });
   document.getElementById('menu-zoom-in').addEventListener('click', () => {
     const webview = getActiveWebview();
@@ -1345,11 +1396,11 @@ function setupEventListeners() {
   });
   document.getElementById('menu-help').addEventListener('click', () => {
     helpModal.classList.add('active');
-    menuDropdown.style.display = 'none';
+    hideContextMenus();
   });
   document.getElementById('menu-about').addEventListener('click', () => {
     aboutModal.classList.add('active');
-    menuDropdown.style.display = 'none';
+    hideContextMenus();
   });
 
   // Tab Context Menu Items
